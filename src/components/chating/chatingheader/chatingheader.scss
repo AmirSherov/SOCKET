@@ -1,0 +1,79 @@
+.chating-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+
+    .chating-user-info {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+
+        .chating-user-name {
+            h1 {
+                color: #fff;
+                text-align: center;
+            }
+        }
+    }
+
+    .chating-user-setting {
+        position: relative;
+        .chating-user-settings {
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+
+            &:hover {
+                transform: rotate(90deg);
+                color: #00ff0d;
+            }
+        }
+
+        .chating-setting {
+            position: absolute;
+            right: 0;
+            top: 50px;
+            background-color: #17212b;
+            padding: 10px 15px;
+            width: 220px;
+            text-align: left;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        &:hover .chating-setting {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        div {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+
+            &:hover {
+                background-color: #2a3b47;
+                padding-left: 20px;
+            }
+
+            span {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            span svg {
+                font-size: 20px;
+                color: #00ff0d;
+            }
+        }
+    }
+}

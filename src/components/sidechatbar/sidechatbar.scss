@@ -1,0 +1,145 @@
+.side-chat-bar-container {
+    background-color: #17212b;
+    height: 100vh;
+    width: 400px;
+    overflow-y: auto;
+    border-right: 1px solid #0e1621;
+
+    &::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: #0e1621;
+        border-radius: 5px;
+    }
+
+    .side-chat-bar-header {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding-top: 10px;
+        padding: 15px;
+
+        .contact-item {
+            color: #fff;
+            padding: 10px 0px 10px 0px;
+            background-color: #17212b;
+            border-bottom: 1px solid #000001;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background-color: #1e2731;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+
+            &:hover {
+                background-color: #2b5278;
+                transform: translateX(5px);
+                border-color: #3a6898;
+            }
+
+            &:active {
+                transform: scale(0.98);
+            }
+
+            span {
+                color: #fff;
+                font-size: 1rem;
+                font-weight: 500;
+                margin-left: 10px;
+            }
+
+            &::before {
+                content: '';
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: #00ff0d;
+                margin-right: 10px;
+            }
+        }
+    }
+}
+
+.sidebar-close-chat {
+    display: none;
+}
+.no-contacts {
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+    background-color: #1e2731;
+    border-radius: 8px;
+    margin: 10px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+    &:hover {
+        background-color: #2C3847;
+    }
+
+    .contact-avatar {
+        margin-right: 12px;
+        
+        img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+    }
+
+    .contact-info {
+        flex: 1;
+        overflow: hidden;
+
+        .contact-name {
+            color: #fff;
+            font-size: 15px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .contact-last-message {
+            color: #8A8D91;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .contact-details {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        
+        .contact-last-message {
+            flex: 1;
+            color: #8A8D91;
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 10px;
+        }
+
+        .contact-time {
+            color: #6D7175;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+    }
+}

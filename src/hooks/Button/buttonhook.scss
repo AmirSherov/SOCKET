@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
+.custom-button-hook {
+    outline: none;
+    background: transparent;
+    border: 2px solid;
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    border-radius: 3px;
+    font-family: "Roboto Mono", serif;
+    font-optical-sizing: auto;
+    font-weight: 700;
+    font-style: normal;
+    transition: 0.2s;
+
+    &:active {
+        transform: scale(0.9);
+    }
+    &:hover {
+        box-shadow: 0 0 10px white, 0 0 8px white inset;
+        cursor: pointer;
+    }
+}
