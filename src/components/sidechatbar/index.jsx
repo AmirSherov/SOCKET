@@ -34,10 +34,11 @@ export default function SideChatBar() {
             return;
         }
 
+        // Подписка на контакты текущего пользователя
         const usersRef = collection(firestoreDb, 'users');
         const q = query(usersRef, where("id", "==", user.id));
 
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const unsubscribeContacts = onSnapshot(q, (querySnapshot) => {
             if (!querySnapshot.empty) {
                 const userDoc = querySnapshot.docs[0];
                 const userData = userDoc.data();
@@ -46,8 +47,46 @@ export default function SideChatBar() {
             setLoading(false);
         });
 
-        return () => unsubscribe();
+        return () => unsubscribeContacts();
     }, [user?.id]);
+
+    // Добавляем новый useEffect для отслеживания изменений данных пользователей
+    useEffect(() => {
+        if (contacts.length === 0) return;
+
+        // Получаем ID всех пользователей из контактов
+        const contactUserIds = contacts.map(contact => {
+            const [user1, user2] = contact.chatId.split('-');
+            return currentUserId === user1 ? user2 : user1;
+        });
+
+        // Создаем подписку на изменения данных пользователей
+        const usersRef = collection(firestoreDb, 'users');
+        const q = query(usersRef, where("id", "in", contactUserIds));
+
+        const unsubscribeUsers = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "modified") {
+                    const updatedUserData = change.doc.data();
+                    
+                    // Обновляем контакты с новыми данными пользователя
+                    setContacts(prevContacts => prevContacts.map(contact => {
+                        const contactUserId = contact.chatId.split('-').find(id => id !== currentUserId);
+                        if (contactUserId === updatedUserData.id) {
+                            return {
+                                ...contact,
+                                name: updatedUserData.displayName,
+                                photoURL: updatedUserData.photoURL
+                            };
+                        }
+                        return contact;
+                    }));
+                }
+            });
+        });
+
+        return () => unsubscribeUsers();
+    }, [contacts, currentUserId]);
 
     useEffect(() => {
         const unsubscribers = contacts.map(contact => {

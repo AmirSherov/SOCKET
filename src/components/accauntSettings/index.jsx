@@ -47,12 +47,16 @@ export default function AccountSettings({ isOpen, onClose }) {
             }
 
             const usersRef = collection(firestoreDb, 'users');
-            const nicknameQuery = query(usersRef, where("nickname", "==", nickname));
-            const querySnapshot = await getDocs(nicknameQuery);
+            
+            // Only check for nickname uniqueness if it was changed
+            if (nickname !== state.user.nickname) {
+                const nicknameQuery = query(usersRef, where("nickname", "==", nickname));
+                const querySnapshot = await getDocs(nicknameQuery);
 
-            if (!querySnapshot.empty && querySnapshot.docs[0].id !== state.user.id) {
-                toast.error('This nickname is already taken');
-                return;
+                if (!querySnapshot.empty) {
+                    toast.error('This nickname is already taken');
+                    return;
+                }
             }
 
             const userQuery = query(usersRef, where("id", "==", state.user.id));
@@ -60,17 +64,46 @@ export default function AccountSettings({ isOpen, onClose }) {
 
             if (!userSnapshot.empty) {
                 const userDoc = userSnapshot.docs[0];
-                await updateDoc(userDoc.ref, {
+                const updatedData = {
                     displayName: username,
                     nickname: nickname,
                     bio: bio,
                     photoURL: avatar,
+                };
+
+                // Обновляем профиль пользователя
+                await updateDoc(userDoc.ref, updatedData);
+
+                // Получаем все чаты пользователя
+                const chatsQuery = query(collection(firestoreDb, 'users'), 
+                    where("contacts", "array-contains", { chatId: new RegExp(`.*${state.user.id}.*`) }));
+                const chatsSnapshot = await getDocs(chatsQuery);
+
+                // Обновляем данные пользователя в контактах других пользователей
+                const updatePromises = chatsSnapshot.docs.map(async (doc) => {
+                    const userData = doc.data();
+                    const updatedContacts = userData.contacts.map(contact => {
+                        if (contact.chatId.includes(state.user.id)) {
+                            return {
+                                ...contact,
+                                name: username,  // Обновляем имя
+                                photoURL: avatar // Обновляем фото
+                            };
+                        }
+                        return contact;
+                    });
+
+                    return updateDoc(doc.ref, { contacts: updatedContacts });
                 });
+
+                await Promise.all(updatePromises);
+
                 toast.success('Profile updated successfully!');
                 onClose();
                 setTimeout(() => window.location.reload(), 500);
             }
         } catch (error) {
+            console.error('Error updating profile:', error);
             toast.error('Error updating profile');
         }
     };

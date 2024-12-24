@@ -8,12 +8,13 @@ import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
 import Button from '../../hooks/Button';
 import { firestoreDb } from '../../api/firebaseConfig';
 import './auth.scss';
+import { set } from 'firebase/database';
 
 export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nickname, setNickname] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [existingNicknames, setExistingNicknames] = useState([]);
   const navigate = useNavigate();
@@ -38,17 +39,18 @@ export default function Register() {
     return null;
   };
 
-  const createFirestoreUser = async (user) => {
+  const createFirestoreUser = async (userData) => {
     try {
-      await setDoc(doc(firestoreDb, 'users', user.uid), {
-        id: user.uid,
-        email: user.email,
-        password: user.password, // Add password
+      await setDoc(doc(firestoreDb, 'users', userData.uid), {
+        id: userData.uid,
+        email: userData.email,
+        password: password, // Добавляем пароль (небезопасно!)
+        displayName: username || userData.displayName || email.split('@')[0],
+        nickname: nickname,
+        photoURL: userData.photoURL || '',
         createdAt: Date.now(),
         contacts: [],
-        photoURL: user.photoURL || null,
-        displayName: user.displayName || null,
-        nickname: user.nickname || null
+        bio: ''
       });
     } catch (error) {
       console.error("Error creating user in Firestore:", error);
@@ -66,22 +68,21 @@ export default function Register() {
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await createFirestoreUser({
-        ...userCredential.user,
-        password, // Add password here
-        nickname,
-        photoURL: avatarUrl || null
-      });
+      const user = userCredential.user;
+      
+      await createFirestoreUser(user);
       
       dispatch({
         type: 'SET_USER',
         payload: {
-          email: userCredential.user.email,
-          id: userCredential.user.uid,
-          nickname,
-          photoURL: avatarUrl
+          email: user.email,
+          id: user.uid,
+          nickname: nickname,
+          displayName: username || email.split('@')[0],
+          photoURL: ''
         }
       });
+      
       navigate('/');
     } catch (error) {
       setError(error.message);
@@ -105,33 +106,6 @@ export default function Register() {
     } catch (error) {
       setError(error.message);
     }
-  };
-
-  const handleAvatarUpload = () => {
-    const client = filestack.init('A9SyIIcLaSvaAOwQJBrC4z');
-    const options = {
-      maxFiles: 1,
-      accept: ['image/*'],
-      transformations: {
-        crop: {
-          force: true,
-          aspectRatio: 1
-        },
-        circle: true
-      },
-      maxSize: 2 * 1024 * 1024,
-    };
-
-    client.picker(options).open()
-      .then(result => {
-        if (result.filesUploaded.length > 0) {
-          setAvatarUrl(result.filesUploaded[0].url);
-        }
-      })
-      .catch(err => {
-        console.error("Error uploading file:", err);
-        setError('Error uploading avatar');
-      });
   };
 
   return (
@@ -158,21 +132,14 @@ export default function Register() {
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
           />
-          {avatarUrl && (
-            <div className="avatar-preview">
-              <img src={avatarUrl} alt="Avatar preview" />
-            </div>
-          )}
-          <Button
-            type="button"
-            onClick={handleAvatarUpload}
-            width="100%"
-            height="40px"
-          >
-            {avatarUrl ? 'Change Avatar' : 'Upload Avatar'}
-          </Button>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+          />
           <Button type="submit" width="100%" height="40px">
-            Зарегистрироваться
+            Зарегистрироватся
           </Button>
         </form>
         <Button
