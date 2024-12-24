@@ -103,7 +103,7 @@ export default function AccountSettings({ isOpen, onClose }) {
                         <input
                             type="text"
                             value={username}
-                            onChange={(e) => setNickname(e.target.value)}
+                            onChange={(e) => setUsername(e.target.value)}
                             placeholder="Enter new nickname"
                         />
                     </label>
