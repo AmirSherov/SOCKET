@@ -72,32 +72,33 @@ export default function Login() {
       const result = await signInWithPopup(auth, googleProvider);
       const userRef = doc(firestoreDb, 'users', result.user.uid);
       const userSnap = await getDoc(userRef);
+      
+      const newUser = {
+        id: result.user.uid,
+        email: result.user.email,
+        displayName: result.user.displayName || 'No Name',
+        photoURL: result.user.photoURL,
+        createdAt: Date.now(),
+        contacts: [],
+        nickname: '@' + result.user.email.split('@')[0]
+      };
 
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        dispatch({
-          type: 'SET_USER',
-          payload: userData,
-        });
-        localStorage.setItem('userId', userData.id);
-        navigate('/', { replace: true });
-      } else {
-        const newUser = {
-          id: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName || 'No Name',
-        };
+      if (!userSnap.exists()) {
         await setDoc(userRef, newUser);
-        dispatch({
-          type: 'SET_USER',
-          payload: newUser,
-        });
-        localStorage.setItem('userId', newUser.id);
-        navigate('/', { replace: true });
       }
+
+      const userData = userSnap.exists() ? userSnap.data() : newUser;
+      
+      dispatch({
+        type: 'SET_USER',
+        payload: userData
+      });
+      
+      localStorage.setItem('userId', result.user.uid);
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Google sign in error:', error);
-      setError('Failed to sign in with Google');
+      setError('Ошибка входа через Google: ' + error.message);
     }
   };
 

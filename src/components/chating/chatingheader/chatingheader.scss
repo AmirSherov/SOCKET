@@ -11,7 +11,11 @@
         justify-content: center;
         align-items: center;
         gap: 20px;
-
+        .chating-user-logo{
+            img{
+                border-radius: 50%
+            };
+        }
         .chating-user-name {
             h1 {
                 color: #fff;
@@ -49,6 +53,37 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             transition: opacity 0.3s ease, transform 0.3s ease;
+            
+            div {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 10px;
+                cursor: pointer;
+                border-radius: 5px;
+
+                &:hover {
+                    padding-left: 20px;
+                }
+
+                span {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                span svg {
+                    font-size: 20px;
+                    color: #00ff0d;
+                }
+
+                &:last-child {
+                    color: #ff4444; // Красный цвет для кнопки удаления
+                    
+                    &:hover {
+                        background-color: rgba(255, 68, 68, 0.1);
+                    }
+                }
+            }
         }
 
         &:hover .chating-setting {

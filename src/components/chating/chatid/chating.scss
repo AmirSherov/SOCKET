@@ -122,6 +122,7 @@
             padding: 10px 15px;
             border-radius: 12px;
             word-wrap: break-word;
+            user-select: none; // Предотвращаем выделение текста при длительном нажатии
 
             &.received {
                 align-self: flex-start;
@@ -162,5 +163,33 @@
             font-weight: 300;
         }
     }
+}
+
+.context-menu {
+  position: fixed;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  padding: 8px;
+  z-index: 1000;
+
+  button {
+    background: none;
+    border: none;
+    padding: 8px 12px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    color: #333;
+    font-size: 14px;
+
+    &:hover {
+      background: #f5f5f5;
+    }
+
+    &:active {
+      background: #e5e5e5;
+    }
+  }
 }
 

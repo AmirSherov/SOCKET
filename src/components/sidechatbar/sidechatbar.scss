@@ -165,6 +165,59 @@
     }
 }
 
+.search-container {
+    padding: 10px;
+    position: relative;
+    top: 50px;
+    input {
+        width: 100%;
+        padding: 10px;
+        background-color: #242f3d;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        font-size: 14px;
+
+        &:focus {
+            outline: none;
+            background-color: #2c3a4a;
+        }
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background-color: #17212b;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
+        max-height: 300px;
+        overflow-y: auto;
+
+        .search-result-item {
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            color: white;
+
+            &:hover {
+                background-color: #242f3d;
+            }
+
+            .user-avatar {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                object-fit: cover;
+            }
+        }
+    }
+}
+
 @media(max-width:750px) {
     .side-chat-bar-container {
         width: 300px;

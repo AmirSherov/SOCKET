@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import "./chating.scss";
 import { useParams } from "react-router-dom";
 import { useGlobalContext } from "../../../context";
@@ -7,9 +7,10 @@ import { IoSend } from "react-icons/io5";
 import { init } from "filestack-js";
 import ChatingHeader from "../chatingheader";
 import { realtimeDb, firestoreDb } from '../../../api/firebaseConfig';
-import { ref, push, onChildAdded } from 'firebase/database';
-import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { ref, push, onChildAdded, remove, off } from 'firebase/database';
+import { doc, getDoc, updateDoc, arrayUnion, collection, getDocs, setDoc } from 'firebase/firestore';
 import Loader from '../../ui/Loader';
+import toast from 'react-hot-toast';
 
 const client = init("A9SyIIcLaSvaAOwQJBrC4z");
 
@@ -23,13 +24,24 @@ export default function Chating() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const userId = state.user.id || localStorage.getItem('userId');
+  const messagesEndRef = useRef(null);
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, messageId: null });
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
     const loadChatData = async () => {
-      if (!chatidSelected) return;
+      setMessages([]);
       setLoading(true);
 
+      if (!chatidSelected) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        // Получаем данные чата из Firestore
         const chatRef = doc(firestoreDb, 'chats', chatidSelected);
         const chatDoc = await getDoc(chatRef);
 
@@ -38,22 +50,54 @@ export default function Chating() {
           return;
         }
 
-        // Подписываемся на сообщения в Realtime Database
         const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
-        const unsubscribe = onChildAdded(messagesRef, (snapshot) => {
-          const newMessage = snapshot.val();
-          setMessages(prev => [...prev, newMessage]);
-        });
+        let isSubscribed = true;
 
-        return () => unsubscribe();
+        // Изменяем обработчик сообщений
+        const messageHandler = (snapshot) => {
+          if (isSubscribed) {
+            const newMessage = {
+              ...snapshot.val(),
+              firebaseKey: snapshot.key
+            };
+            // Проверяем, нет ли уже такого сообщения
+            setMessages(prev => {
+              const messageExists = prev.some(msg => msg.firebaseKey === snapshot.key);
+              if (messageExists) {
+                return prev;
+              }
+              return [...prev, newMessage];
+            });
+            setTimeout(scrollToBottom, 100);
+          }
+        };
+
+        onChildAdded(messagesRef, messageHandler);
+
+        return () => {
+          isSubscribed = false;
+          // Отключаем слушатель
+          const messagesRefOff = ref(realtimeDb, `chats/${chatidSelected}/messages`);
+          if (messagesRefOff) {
+            off(messagesRefOff, 'child_added', messageHandler);
+          }
+        };
+
       } catch (error) {
-        console.error("Error loading chat:", error);
+        toast.error('Error loading chat');
       } finally {
         setLoading(false);
       }
     };
 
     loadChatData();
+
+    return () => {
+      setMessages([]);
+      setSelectedFile(null);
+      setFileName("");
+      setMessage("");
+    };
   }, [chatidSelected]);
 
   const openFilestack = () => {
@@ -76,35 +120,107 @@ export default function Chating() {
   const sendMessage = async () => {
     if (!message.trim() && !selectedFile) return;
 
+    const currentMessage = message;
+    const currentFile = selectedFile;
+
+    setMessage("");
+    setSelectedFile(null);
+    setFileName("");
+
     const newMessage = {
-      text: message,
-      file: selectedFile,
+      id: Date.now().toString(),
+      text: currentMessage,
+      file: currentFile,
       timestamp: Date.now(),
       senderId: userId
     };
 
     try {
-      // Отправляем в Realtime Database
+      // Define messagesRef once at the beginning
       const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
       await push(messagesRef, newMessage);
-
-      // Обновляем последнее сообщение в Firestore
+      
       const chatRef = doc(firestoreDb, 'chats', chatidSelected);
+      const chatDoc = await getDoc(chatRef);
+
+      if (!chatDoc.exists()) {
+        const recipientId = chatidSelected.replace(userId, '').replace('-', '');
+        
+        // ...existing chat creation code...
+      }
+    
+      // Update lastMessage
       await updateDoc(chatRef, {
         lastMessage: {
-          text: message,
+          text: currentMessage,
           timestamp: Date.now(),
           senderId: userId
         }
       });
 
-      setMessage("");
-      setSelectedFile(null);
-      setFileName("");
+      setTimeout(scrollToBottom, 100);
+      toast.success('Message sent');
     } catch (error) {
-      console.error("Error sending message:", error);
+      toast.error('Error sending message');
+      setMessage(currentMessage);
+      setSelectedFile(currentFile);
+      setFileName(fileName);
     }
   };
+
+  // Добавляем обработчик контекстного меню
+  const handleContextMenu = (e, messageId, senderId, firebaseKey) => {
+    e.preventDefault();
+    // Проверяем, принадлежит ли сообщение текущему пользователю
+    if (senderId === userId) {
+      setContextMenu({
+        visible: true,
+        x: e.pageX,
+        y: e.pageY,
+        messageId,
+        firebaseKey
+      });
+    }
+  };
+
+  // Добавляем обработчик длительного нажатия для мобильных устройств
+  const handleTouchStart = (messageId, senderId, firebaseKey) => {
+    let timer = setTimeout(() => {
+      if (senderId === userId) {
+        const element = document.getElementById(`message-${messageId}`);
+        const rect = element.getBoundingClientRect();
+        setContextMenu({
+          visible: true,
+          x: rect.left,
+          y: rect.top,
+          messageId,
+          firebaseKey
+        });
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  };
+
+  // Добавляем функцию удаления сообщения
+  const deleteMessage = async (messageId, firebaseKey) => {
+    try {
+      const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${firebaseKey}`);
+      await remove(messageRef);
+      setMessages(messages.filter(msg => msg.id !== messageId));
+      setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
+      toast.success('Message deleted');
+    } catch (error) {
+      toast.error('Error deleting message');
+    }
+  };
+
+  // Добавляем обработчик клика вне контекстного меню
+  useEffect(() => {
+    const handleClick = () => setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   if (!chatidSelected) {
     return (
@@ -129,12 +245,29 @@ export default function Chating() {
       <ChatingHeader />
       <div className="messages-container">
         {messages.map((msg, index) => (
-          <div key={index} className={`message ${msg.senderId === state.user.id ? 'sent' : 'received'}`}>
+          <div
+            key={index}
+            id={`message-${msg.id}`}
+            className={`message ${msg.senderId === userId ? 'sent' : 'received'}`}
+            onContextMenu={(e) => handleContextMenu(e, msg.id, msg.senderId, msg.firebaseKey)}
+            onTouchStart={() => handleTouchStart(msg.id, msg.senderId, msg.firebaseKey)}
+          >
             {msg.text && <p>{msg.text}</p>}
             {msg.file && <img src={msg.file} alt="Uploaded file" className="message-image" />}
           </div>
         ))}
+        <div ref={messagesEndRef} /> {/* Добавляем элемент для прокрутки */}
       </div>
+      {contextMenu.visible && (
+        <div
+          className="context-menu"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+        >
+          <button onClick={() => deleteMessage(contextMenu.messageId, contextMenu.firebaseKey)}>
+            Удалить сообщение
+          </button>
+        </div>
+      )}
       <div className="chating-footer">
         <div>
           <button onClick={openFilestack} className="file-upload-button">

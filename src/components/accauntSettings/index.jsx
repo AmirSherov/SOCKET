@@ -6,6 +6,7 @@ import { collection, query, where, getDocs, updateDoc } from 'firebase/firestore
 import { useGlobalContext } from '../../context/index';
 import { FaCamera } from 'react-icons/fa';
 import { init } from "filestack-js";
+import toast from 'react-hot-toast';
 
 const client = init("A9SyIIcLaSvaAOwQJBrC4z");
 
@@ -41,7 +42,7 @@ export default function AccountSettings({ isOpen, onClose }) {
     const handleUpdateProfile = async () => {
         try {
             if (!nickname.startsWith('@')) {
-                alert('Nickname must start with "@"');
+                toast.error('Nickname must start with "@"');
                 return;
             }
 
@@ -50,7 +51,7 @@ export default function AccountSettings({ isOpen, onClose }) {
             const querySnapshot = await getDocs(nicknameQuery);
 
             if (!querySnapshot.empty && querySnapshot.docs[0].id !== state.user.id) {
-                alert('This nickname is already taken. Please choose another one.');
+                toast.error('This nickname is already taken');
                 return;
             }
 
@@ -65,11 +66,12 @@ export default function AccountSettings({ isOpen, onClose }) {
                     bio: bio,
                     photoURL: avatar,
                 });
+                toast.success('Profile updated successfully!');
                 onClose();
                 setTimeout(() => window.location.reload(), 500);
             }
         } catch (error) {
-            console.error("Error updating profile:", error);
+            toast.error('Error updating profile');
         }
     };
 
@@ -78,8 +80,9 @@ export default function AccountSettings({ isOpen, onClose }) {
             await signOut(auth);
             localStorage.removeItem('userId');
             window.location.href = '/login';
+            toast.success('Successfully signed out');
         } catch (error) {
-            console.error("Error signing out:", error);
+            toast.error('Error signing out');
         }
     };
 

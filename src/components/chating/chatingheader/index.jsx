@@ -10,6 +10,10 @@ import { SlArrowRight } from "react-icons/sl";
 import { useGlobalContext } from '../../../context';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { ref, remove } from 'firebase/database';
+import { firestoreDb, realtimeDb } from '../../../api/firebaseConfig';
+import toast from 'react-hot-toast';
 
 function ChatingHeader() {
     const { state, dispatch } = useGlobalContext();
@@ -30,6 +34,69 @@ function ChatingHeader() {
             navigate('/');
         } else {
             dispatch({ type: "SIDEBAR_CLOSE", payload: !state.sidebarClose });
+        }
+    };
+
+    const handleDeleteChat = async () => {
+        if (!state.selectedChat) return;
+
+        try {
+            const chatRef = doc(firestoreDb, 'chats', state.selectedChat);
+            const chatDoc = await getDoc(chatRef);
+            
+            if (!chatDoc.exists()) return;
+            
+            const chatData = chatDoc.data();
+            const participants = chatData.participants;
+
+            // Получаем всех пользователей
+            const usersCollectionRef = collection(firestoreDb, 'users');
+            const usersSnapshot = await getDocs(usersCollectionRef);
+            const users = [];
+            
+            // Находим нужных пользователей по их внутреннему id
+            usersSnapshot.forEach(doc => {
+                const userData = doc.data();
+                if (participants.includes(userData.id)) {
+                    users.push({
+                        docId: doc.id,
+                        ...userData
+                    });
+                }
+            });
+
+            // Обновляем контакты для каждого найденного пользователя
+            const userUpdates = users.map(user => {
+                const userRef = doc(firestoreDb, 'users', user.docId);
+                const updatedContacts = (user.contacts || []).filter(
+                    contact => contact.chatId !== state.selectedChat
+                );
+                
+                return updateDoc(userRef, { contacts: updatedContacts });
+            });
+
+            // Удаляем сообщения из Realtime Database
+            const messagesRef = ref(realtimeDb, `chats/${state.selectedChat}/messages`);
+            await remove(messagesRef);
+
+            // Удаляем чат из Firestore
+            await deleteDoc(chatRef);
+
+            // Ждем завершения всех обновлений
+            await Promise.all(userUpdates);
+
+            // После успешного удаления обнуляем выбранный чат в контек��те
+            dispatch({ type: "SET_SELECTED_CHAT", payload: null });
+            dispatch({ type: "SET_SELECTED_USER_NAME", payload: null });
+            dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: null });
+
+            // Перенаправляем на главную
+            toast.success('Chat deleted successfully');
+            navigate('/');
+
+        } catch (error) {
+            toast.error('Error deleting chat');
+            console.error("Error deleting chat:", error);
         }
     };
 
@@ -111,7 +178,7 @@ function ChatingHeader() {
                             <MdReport />
                         </span>
                     </div>
-                    <div>
+                    <div onClick={handleDeleteChat}>
                         <span>Delete Chat</span>
                         <span>
                             <MdDelete />
