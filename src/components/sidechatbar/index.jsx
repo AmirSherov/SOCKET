@@ -2,43 +2,56 @@ import "./sidechatbar.scss";
 import { useGlobalContext } from "../../context";
 import { useState, useEffect } from "react";
 import { firestoreDb } from '../../api/firebaseConfig';
-import { collection, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, doc, onSnapshot } from 'firebase/firestore';
 import Loader from '../ui/Loader';
 
 export default function SideChatBar() {
     const { state, dispatch } = useGlobalContext();
     const [contacts, setContacts] = useState([]);
+    const [chatMessages, setChatMessages] = useState({});
     const [loading, setLoading] = useState(true);
     const user = state.user;
+    useEffect(() => {
+        if (!user?.id) {
+            setLoading(false);
+            return;
+        }
+
+        const usersRef = collection(firestoreDb, 'users');
+        const q = query(usersRef, where("id", "==", user.id));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            if (!querySnapshot.empty) {
+                const userDoc = querySnapshot.docs[0];
+                const userData = userDoc.data();
+                setContacts(userData.contacts || []);
+            }
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [user?.id]);
 
     useEffect(() => {
-        const loadUserContacts = async () => {
-            if (!user?.id) {  // Изменено с user.id на user.uid
-                setLoading(false);
-                return;
-            }
-            
-            try {
-                const usersRef = collection(firestoreDb, 'users');
-                // Изменено условие where
-                const q = query(usersRef, where("id", "==", user.id));
-                const querySnapshot = await getDocs(q);
-                
-                if (!querySnapshot.empty) {
-                    const userDoc = querySnapshot.docs[0];
-                    const userData = userDoc.data();
-                    console.log("Loaded contacts:", userData.contacts); // Для отладки
-                    setContacts(userData.contacts || []);
-                }
-            } catch (error) {
-                console.error("Error loading contacts:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        const unsubscribers = contacts.map(contact => {
+            if (!contact.chatId) return null;
 
-        loadUserContacts();
-    }, [user?.uid]); // Изменено с user.id на user.uid
+            const chatRef = doc(firestoreDb, 'chats', contact.chatId);
+            return onSnapshot(chatRef, (chatDoc) => {
+                if (chatDoc.exists()) {
+                    const chatData = chatDoc.data();
+                    setChatMessages(prev => ({
+                        ...prev,
+                        [contact.chatId]: chatData.lastMessage
+                    }));
+                }
+            });
+        });
+
+        return () => {
+            unsubscribers.forEach(unsub => unsub && unsub());
+        };
+    }, [contacts]);
 
     if (loading) {
         return (
@@ -54,6 +67,11 @@ export default function SideChatBar() {
 
     return (
         <div className={`side-chat-bar-container ${state.sidebarClose ? "sidebar-close-chat" : ""}`}>
+            <div onClick={() => dispatch({ type: 'SET_IS_BURGER_OPEN', payload: !state.isBurgerOpen })} className={`burger-menu ${state.isBurgerOpen ? "open" : ""}`}>
+                <div className="burger-line"></div>
+                <div className="burger-line"></div>
+                <div className="burger-line"></div>
+            </div>
             <div className="side-chat-bar-header">
                 {contacts.length > 0 ? (
                     contacts.map(contact => (
@@ -76,11 +94,11 @@ export default function SideChatBar() {
                                 <div className="contact-name">{contact.name}</div>
                                 <div className="contact-details">
                                     <div className="contact-last-message">
-                                        {contact.lastMessage ? contact.lastMessage.text : 'Нет сообщений'}
+                                        {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
                                     </div>
-                                    {contact.lastMessage && (
+                                    {chatMessages[contact.chatId]?.timestamp && (
                                         <div className="contact-time">
-                                            {new Date(contact.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {new Date(chatMessages[contact.chatId].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </div>
                                     )}
                                 </div>

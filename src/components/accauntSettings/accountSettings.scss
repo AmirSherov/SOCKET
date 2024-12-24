@@ -1,0 +1,157 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(14, 22, 33, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999999;
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background-color: #17212b;
+  padding: 30px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  color: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border: 1px solid #2b5278;
+
+  h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+  }
+
+  .avatar-section {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+
+    .avatar-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 3px solid #2b5278;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .change-avatar-btn {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(43, 82, 120, 0.8);
+        border: none;
+        color: white;
+        padding: 8px 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(43, 82, 120, 1);
+        }
+
+        svg {
+          font-size: 18px;
+        }
+      }
+    }
+  }
+
+  .settings-section {
+    margin-bottom: 25px;
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      color: #89a3c2;
+      font-weight: 500;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      background-color: #242f3d;
+      border: 1px solid #2b5278;
+      color: white;
+      font-size: 15px;
+      transition: all 0.3s ease;
+
+      &:focus {
+        outline: none;
+        border-color: #3a6898;
+        box-shadow: 0 0 0 2px rgba(58, 104, 152, 0.2);
+      }
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 30px;
+
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+
+      &.save-btn {
+        background-color: #2b5278;
+        color: white;
+
+        &:hover {
+          background-color: #3a6898;
+          transform: translateY(-2px);
+        }
+      }
+
+      &.signout-btn {
+        background-color: #dc3545;
+        color: white;
+
+        &:hover {
+          background-color: #c82333;
+          transform: translateY(-2px);
+        }
+      }
+
+      &.close-btn {
+        background-color: #242f3d;
+        color: #89a3c2;
+
+        &:hover {
+          background-color: #2f3f4f;
+          transform: translateY(-2px);
+        }
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+}

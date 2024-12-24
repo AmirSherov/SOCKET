@@ -11,8 +11,6 @@ import { useGlobalContext } from '../../../context';
 function ChatingHeader() {
     const { state, dispatch } = useGlobalContext();
     
-    console.log('ChatingHeader state:', state); // Отладка состояния
-
     return(
         <div className="chating-header">
         <div>

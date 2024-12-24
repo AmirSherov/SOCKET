@@ -1,8 +1,27 @@
 .main-page-container{
     display: grid;
+    width: 100%;
     grid-template-columns: 0.2fr 1.1fr 3fr ;
 }
 .sidebar-close-main{
     display: grid;
     grid-template-columns: 0fr  3fr ;
+}
+@media(max-width:1050px){
+    .main-page-container{
+        grid-template-columns: 0fr 1fr;
+    }
+    .sidebar-close-main{
+        grid-template-columns: 0fr 1fr;
+    }
+}
+@media(max-width:600px){
+    .main-page-container{
+        grid-template-columns:0fr;
+        width: 100%;
+    }
+    .sidebar-close-main{
+        grid-template-columns: 0fr;
+        width: 100%;
+    }
 }

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from 'react-router-dom';
 import "./chating.scss";
 import { useGlobalContext } from "../../../context";
 import { FaCloudUploadAlt } from "react-icons/fa";
