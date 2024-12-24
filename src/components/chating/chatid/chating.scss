@@ -166,30 +166,63 @@
 }
 
 .context-menu {
-  position: fixed;
+  position: fixed; // изменили с absolute на fixed
   background: #fff;
+  border: 1px solid #ccc;
   border-radius: 4px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   padding: 8px;
   z-index: 1000;
-
-  button {
-    background: none;
-    border: none;
-    padding: 8px 12px;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    color: #333;
-    font-size: 14px;
-
-    &:hover {
-      background: #f5f5f5;
-    }
-
-    &:active {
-      background: #e5e5e5;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  
+  // Предотвращаем выход за пределы экрана
+  @media (max-width: 768px) {
+    max-width: 200px;
+    width: auto;
+    
+    // Убедимся, что меню всегда видно
+    &.visible {
+      display: block;
+      
+      // Корректируем позицию если меню выходит за края экрана
+      &.too-right {
+        right: 10px;
+        left: auto;
+      }
+      
+      &.too-bottom {
+        bottom: 10px;
+        top: auto;
+      }
     }
   }
+
+  button {
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    
+    &:hover {
+      background-color: #f5f5f5;
+    }
+    
+    // Увеличиваем область нажатия на мобильных
+    @media (max-width: 768px) {
+      padding: 12px 16px;
+      font-size: 16px; // Увеличиваем размер шрифта для лучшего касания
+    }
+  }
+}
+
+// Предотвращаем выделение текста при долгом нажатии
+.message {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 

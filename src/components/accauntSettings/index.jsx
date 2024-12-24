@@ -74,33 +74,39 @@ export default function AccountSettings({ isOpen, onClose }) {
                 // Обновляем профиль пользователя
                 await updateDoc(userDoc.ref, updatedData);
 
-                // Получаем все чаты пользователя
-                const chatsQuery = query(collection(firestoreDb, 'users'), 
-                    where("contacts", "array-contains", { chatId: new RegExp(`.*${state.user.id}.*`) }));
-                const chatsSnapshot = await getDocs(chatsQuery);
+                // Получаем всех пользователей, у которых есть контакты
+                const allUsersQuery = query(collection(firestoreDb, 'users'));
+                const allUsersSnapshot = await getDocs(allUsersQuery);
 
                 // Обновляем данные пользователя в контактах других пользователей
-                const updatePromises = chatsSnapshot.docs.map(async (doc) => {
+                const updatePromises = allUsersSnapshot.docs.map(async (doc) => {
                     const userData = doc.data();
-                    const updatedContacts = userData.contacts.map(contact => {
-                        if (contact.chatId.includes(state.user.id)) {
-                            return {
-                                ...contact,
-                                name: username,  // Обновляем имя
-                                photoURL: avatar // Обновляем фото
-                            };
-                        }
-                        return contact;
-                    });
+                    if (userData.contacts && Array.isArray(userData.contacts)) {
+                        const updatedContacts = userData.contacts.map(contact => {
+                            const [user1, user2] = contact.chatId.split('-');
+                            if (user1 === state.user.id || user2 === state.user.id) {
+                                return {
+                                    ...contact,
+                                    name: username,
+                                    photoURL: avatar
+                                };
+                            }
+                            return contact;
+                        });
 
-                    return updateDoc(doc.ref, { contacts: updatedContacts });
+                        // Обновляем только если были изменения
+                        if (JSON.stringify(updatedContacts) !== JSON.stringify(userData.contacts)) {
+                            return updateDoc(doc.ref, { contacts: updatedContacts });
+                        }
+                    }
+                    return Promise.resolve();
                 });
 
                 await Promise.all(updatePromises);
 
                 toast.success('Profile updated successfully!');
                 onClose();
-                setTimeout(() => window.location.reload(), 500);
+                window.location.reload();
             }
         } catch (error) {
             console.error('Error updating profile:', error);

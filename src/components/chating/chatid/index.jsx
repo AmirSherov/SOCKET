@@ -7,7 +7,7 @@ import { IoSend } from "react-icons/io5";
 import { init } from "filestack-js";
 import ChatingHeader from "../chatingheader";
 import { realtimeDb, firestoreDb } from '../../../api/firebaseConfig';
-import { ref, push, onChildAdded, remove, off } from 'firebase/database';
+import { ref, push, onChildAdded, remove, off, onChildRemoved } from 'firebase/database';
 import { doc, getDoc, updateDoc, arrayUnion, collection, getDocs, setDoc } from 'firebase/firestore';
 import Loader from '../../ui/Loader';
 import toast from 'react-hot-toast';
@@ -26,6 +26,8 @@ export default function Chating() {
   const userId = state.user.id || localStorage.getItem('userId');
   const messagesEndRef = useRef(null);
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, messageId: null });
+  const [touchTimer, setTouchTimer] = useState(null);
+  const [touchStartTime, setTouchStartTime] = useState(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,34 +55,35 @@ export default function Chating() {
         const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
         let isSubscribed = true;
 
-        // Изменяем обработчик сообщений
-        const messageHandler = (snapshot) => {
+        // Слушатель новых сообщений
+        const messageAddedHandler = (snapshot) => {
           if (isSubscribed) {
             const newMessage = {
               ...snapshot.val(),
               firebaseKey: snapshot.key
             };
-            // Проверяем, нет ли уже такого сообщения
             setMessages(prev => {
               const messageExists = prev.some(msg => msg.firebaseKey === snapshot.key);
-              if (messageExists) {
-                return prev;
-              }
-              return [...prev, newMessage];
+              return messageExists ? prev : [...prev, newMessage];
             });
             setTimeout(scrollToBottom, 100);
           }
         };
 
-        onChildAdded(messagesRef, messageHandler);
+        // Слушатель удаленных сообщений
+        const messageRemovedHandler = (snapshot) => {
+          if (isSubscribed) {
+            setMessages(prev => prev.filter(msg => msg.firebaseKey !== snapshot.key));
+          }
+        };
+
+        onChildAdded(messagesRef, messageAddedHandler);
+        onChildRemoved(messagesRef, messageRemovedHandler);
 
         return () => {
           isSubscribed = false;
-          // Отключаем слушатель
-          const messagesRefOff = ref(realtimeDb, `chats/${chatidSelected}/messages`);
-          if (messagesRefOff) {
-            off(messagesRefOff, 'child_added', messageHandler);
-          }
+          off(messagesRef, 'child_added', messageAddedHandler);
+          off(messagesRef, 'child_removed', messageRemovedHandler);
         };
 
       } catch (error) {
@@ -183,23 +186,48 @@ export default function Chating() {
     }
   };
 
-  // Добавляем обработчик длительного нажатия для мобильных устройств
-  const handleTouchStart = (messageId, senderId, firebaseKey) => {
-    let timer = setTimeout(() => {
+  // Добавляем обработчики touch событий
+  const handleTouchStart = (e, messageId, senderId, firebaseKey) => {
+    e.preventDefault();
+    setTouchStartTime(Date.now());
+    
+    const timer = setTimeout(() => {
       if (senderId === userId) {
+        const touch = e.touches[0];
         const element = document.getElementById(`message-${messageId}`);
         const rect = element.getBoundingClientRect();
+        
         setContextMenu({
           visible: true,
-          x: rect.left,
-          y: rect.top,
+          x: touch.pageX,
+          y: touch.pageY,
           messageId,
           firebaseKey
         });
       }
     }, 500);
+    
+    setTouchTimer(timer);
+  };
 
-    return () => clearTimeout(timer);
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+    }
+    
+    // Если касание было коротким, не показываем меню
+    if (Date.now() - touchStartTime < 500) {
+      setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
+    }
   };
 
   // Добавляем функцию удаления сообщения
@@ -207,10 +235,36 @@ export default function Chating() {
     try {
       const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${firebaseKey}`);
       await remove(messageRef);
-      setMessages(messages.filter(msg => msg.id !== messageId));
+
+      // После удаления сообщения проверяем, остались ли ещё сообщения
+      const chatRef = doc(firestoreDb, 'chats', chatidSelected);
+      const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
+      
+      // Получаем все оставшиеся сообщения
+      const remainingMessages = messages.filter(msg => msg.id !== messageId);
+      
+      // Если сообщений больше нет или последнее сообщение было удалено
+      if (remainingMessages.length === 0) {
+        // Обновляем lastMessage на null
+        await updateDoc(chatRef, {
+          lastMessage: null
+        });
+      } else {
+        // Если есть другие сообщения, обновляем lastMessage на последнее сообщен��е
+        const lastMsg = remainingMessages[remainingMessages.length - 1];
+        await updateDoc(chatRef, {
+          lastMessage: {
+            text: lastMsg.text,
+            timestamp: lastMsg.timestamp,
+            senderId: lastMsg.senderId
+          }
+        });
+      }
+
       setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
       toast.success('Message deleted');
     } catch (error) {
+      console.error('Error deleting message:', error);
       toast.error('Error deleting message');
     }
   };
@@ -250,13 +304,15 @@ export default function Chating() {
             id={`message-${msg.id}`}
             className={`message ${msg.senderId === userId ? 'sent' : 'received'}`}
             onContextMenu={(e) => handleContextMenu(e, msg.id, msg.senderId, msg.firebaseKey)}
-            onTouchStart={() => handleTouchStart(msg.id, msg.senderId, msg.firebaseKey)}
+            onTouchStart={(e) => handleTouchStart(e, msg.id, msg.senderId, msg.firebaseKey)}
+            onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
           >
             {msg.text && <p>{msg.text}</p>}
             {msg.file && <img src={msg.file} alt="Uploaded file" className="message-image" />}
           </div>
         ))}
-        <div ref={messagesEndRef} /> {/* Добавляем элемент для прокрутки */}
+        <div ref={messagesEndRef} />
       </div>
       {contextMenu.visible && (
         <div
