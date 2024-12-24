@@ -1,16 +1,27 @@
 import "./sidechatbar.scss";
 import { useGlobalContext } from "../../context";
-import { useState, useEffect } from "react";
+import { useState, useEffect} from "react";
+import { useNavigate } from "react-router-dom";
 import { firestoreDb } from '../../api/firebaseConfig';
 import { collection, query, where, doc, onSnapshot } from 'firebase/firestore';
 import Loader from '../ui/Loader';
-
 export default function SideChatBar() {
     const { state, dispatch } = useGlobalContext();
     const [contacts, setContacts] = useState([]);
     const [chatMessages, setChatMessages] = useState({});
     const [loading, setLoading] = useState(true);
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const navigate = useNavigate();
     const user = state.user;
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+        };
+    })
     useEffect(() => {
         if (!user?.id) {
             setLoading(false);
@@ -60,9 +71,12 @@ export default function SideChatBar() {
             </div>
         );
     }
-
     const selectChat = (chatId) => {
-        dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
+        if(windowWidth < 600){
+            navigate(`/chating/${chatId}`);
+        } else{
+            dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
+        }
     };
 
     return (
@@ -75,9 +89,9 @@ export default function SideChatBar() {
             <div className="side-chat-bar-header">
                 {contacts.length > 0 ? (
                     contacts.map(contact => (
-                        <div 
-                            key={contact.chatId} 
-                            className="contact-item" 
+                        <div
+                            key={contact.chatId}
+                            className="contact-item"
                             onClick={() => {
                                 selectChat(contact.chatId);
                                 dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.name });
@@ -85,16 +99,16 @@ export default function SideChatBar() {
                             }}
                         >
                             <div className="contact-avatar">
-                                <img 
-                                    src={contact.photoURL || 'default-avatar.png'} 
-                                    alt={contact.name} 
+                                <img
+                                    src={contact.photoURL || 'default-avatar.png'}
+                                    alt={contact.name}
                                 />
                             </div>
-                            <div className="contact-info">
+                            <div onClick={() => selectChat(contact.chatId)} className="contact-info">
                                 <div className="contact-name">{contact.name}</div>
                                 <div className="contact-details">
                                     <div className="contact-last-message">
-                                        {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
+                                       {chatMessages[contact.chatId]?.senderId === user.id ? 'Вы: ' : ''} {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
                                     </div>
                                     {chatMessages[contact.chatId]?.timestamp && (
                                         <div className="contact-time">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./chating.scss";
+import { useParams } from "react-router-dom";
 import { useGlobalContext } from "../../../context";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import { IoSend } from "react-icons/io5";
@@ -14,21 +15,22 @@ const client = init("A9SyIIcLaSvaAOwQJBrC4z");
 
 export default function Chating() {
   const { state } = useGlobalContext();
-  const chatid = state.selectedChat; 
+  const { chatid } = useParams();
+  const chatidSelected = state.selectedChat || chatid;
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileName, setFileName] = useState("");
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const userId = state.user.id || localStorage.getItem('userId');
   useEffect(() => {
     const loadChatData = async () => {
-      if (!chatid) return;
+      if (!chatidSelected) return;
       setLoading(true);
 
       try {
         // Получаем данные чата из Firestore
-        const chatRef = doc(firestoreDb, 'chats', chatid);
+        const chatRef = doc(firestoreDb, 'chats', chatidSelected);
         const chatDoc = await getDoc(chatRef);
 
         if (!chatDoc.exists()) {
@@ -37,7 +39,7 @@ export default function Chating() {
         }
 
         // Подписываемся на сообщения в Realtime Database
-        const messagesRef = ref(realtimeDb, `chats/${chatid}/messages`);
+        const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
         const unsubscribe = onChildAdded(messagesRef, (snapshot) => {
           const newMessage = snapshot.val();
           setMessages(prev => [...prev, newMessage]);
@@ -52,7 +54,7 @@ export default function Chating() {
     };
 
     loadChatData();
-  }, [chatid]);
+  }, [chatidSelected]);
 
   const openFilestack = () => {
     const options = {
@@ -60,13 +62,13 @@ export default function Chating() {
       fromSources: ['local_file_system'],
       onUploadDone: (response) => {
         if (response.filesUploaded.length > 0) {
-          const uploadedFileUrl = response.filesUploaded[0].url; 
+          const uploadedFileUrl = response.filesUploaded[0].url;
           setSelectedFile(uploadedFileUrl);
           setFileName(response.filesUploaded[0].filename);
         }
       },
     };
-  
+
     const picker = client.picker(options);
     picker.open();
   };
@@ -78,21 +80,21 @@ export default function Chating() {
       text: message,
       file: selectedFile,
       timestamp: Date.now(),
-      senderId: state.user.id
+      senderId: userId
     };
 
     try {
       // Отправляем в Realtime Database
-      const messagesRef = ref(realtimeDb, `chats/${chatid}/messages`);
+      const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
       await push(messagesRef, newMessage);
 
       // Обновляем последнее сообщение в Firestore
-      const chatRef = doc(firestoreDb, 'chats', chatid);
+      const chatRef = doc(firestoreDb, 'chats', chatidSelected);
       await updateDoc(chatRef, {
         lastMessage: {
           text: message,
           timestamp: Date.now(),
-          senderId: state.user.id
+          senderId: userId
         }
       });
 
@@ -103,8 +105,8 @@ export default function Chating() {
       console.error("Error sending message:", error);
     }
   };
-  
-  if (!chatid) {
+
+  if (!chatidSelected) {
     return (
       <div className="chating-container">
         <div className="no-chat-selected">
@@ -141,18 +143,18 @@ export default function Chating() {
           </button>
         </div>
         <div className="input-container">
-          <input 
-            type="text" 
-            value={message} 
+          <input
+            type="text"
+            value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Введите сообщение" 
+            placeholder="Введите сообщение"
             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
           />
           {fileName && <div className="file-name">{fileName}</div>}
         </div>
         <div>
-          <button 
-            onClick={sendMessage} 
+          <button
+            onClick={sendMessage}
             disabled={!message.trim() && !selectedFile}
             className="send-button"
           >
