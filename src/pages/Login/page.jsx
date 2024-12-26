@@ -6,7 +6,7 @@ import { auth, googleProvider, firestoreDb } from '../../api/firebaseConfig';
 import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 import Button from '../../hooks/Button';
 import './auth.scss';
-
+import { initializeNotifications } from '../../api/firebaseConfig';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
