@@ -7,7 +7,7 @@ import { IoSend } from "react-icons/io5";
 import { init } from "filestack-js";
 import ChatingHeader from "../chatingheader";
 import { realtimeDb, firestoreDb } from '../../../api/firebaseConfig';
-import { ref, push, onChildAdded, remove, off, onChildRemoved, update } from 'firebase/database'; // добавляем update
+import { ref, push, onChildAdded, remove, off, onChildRemoved, update, onChildChanged } from 'firebase/database'; // добавляем update
 import { doc, getDoc, updateDoc, arrayUnion, collection, getDocs, setDoc } from 'firebase/firestore';
 import Loader from '../../ui/Loader';
 import toast from 'react-hot-toast';
@@ -102,6 +102,19 @@ export default function Chating() {
           }
         };
 
+        // Добавляем слушатель изменений сообщений
+        const messageChangedHandler = onChildChanged(messagesRef, (snapshot) => {
+          if (isSubscribed) {
+            const changedMessage = {
+              ...snapshot.val(),
+              firebaseKey: snapshot.key
+            };
+            setMessages(prev => prev.map(msg => 
+              msg.firebaseKey === snapshot.key ? changedMessage : msg
+            ));
+          }
+        });
+
         onChildAdded(messagesRef, messageAddedHandler);
         onChildRemoved(messagesRef, messageRemovedHandler);
 
@@ -109,6 +122,7 @@ export default function Chating() {
           isSubscribed = false;
           off(messagesRef, 'child_added', messageAddedHandler);
           off(messagesRef, 'child_removed', messageRemovedHandler);
+          off(messagesRef, 'child_changed', messageChangedHandler); // Отписываемся от изменений
         };
 
       } catch (error) {
@@ -185,7 +199,8 @@ export default function Chating() {
           text: currentMessage,
           timestamp: Date.now(),
           senderId: userId,
-          unread: true  // Добавляем флаг непрочитанного
+          unread: true,  // Добавляем флаг непрочитанного
+          status: 'delivered'
         }
       });
 
@@ -201,18 +216,38 @@ export default function Chating() {
 
   // Add new function to mark messages as read
   const markMessagesAsRead = async () => {
-    const unreadMessages = messages.filter(msg => 
-      msg.senderId !== userId && msg.status !== 'read'
-    );
-  
-    for (const msg of unreadMessages) {
-      const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${msg.firebaseKey}`);
-      try {
-        // Используем update вместо updateDoc
-        await update(messageRef, { status: 'read' });
-      } catch (error) {
-        console.error('Error marking message as read:', error);
+    if (!chatidSelected) return;
+
+    try {
+      // Помечаем последнее сообщение как прочитанное в Firestore
+      const chatRef = doc(firestoreDb, 'chats', chatidSelected);
+      const chatDoc = await getDoc(chatRef);
+      
+      if (chatDoc.exists()) {
+        const chatData = chatDoc.data();
+        if (chatData.lastMessage?.senderId !== userId && chatData.lastMessage?.unread) {
+          await updateDoc(chatRef, {
+            'lastMessage.unread': false,
+            'lastMessage.status': 'read'
+          });
+        }
       }
+
+      // Помечаем все сообщения как прочитанные в Realtime Database
+      const unreadMessages = messages.filter(msg => 
+        msg.senderId !== userId && 
+        (msg.unread || msg.status !== 'read')
+      );
+
+      for (const msg of unreadMessages) {
+        const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${msg.firebaseKey}`);
+        await update(messageRef, { 
+          status: 'read',
+          unread: false 
+        });
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
     }
   };
 
@@ -315,44 +350,17 @@ export default function Chating() {
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
-  // Добавляем эффект для отслеживания прочтения сообщений
+  // Обновляем useEffect для отслеживания прочтения сообщений
   useEffect(() => {
     if (!chatidSelected || loading) return;
 
-    // Отмечаем сообщения как прочитанные когда пользователь открывает чат
-    const markMessagesAsRead = async () => {
-      const unreadMessages = messages.filter(msg => 
-        msg.senderId !== userId && // Сообщения не от текущего пользователя
-        msg.status !== 'read' // Непрочитанные сообщения
-      );
-
-      for (const msg of unreadMessages) {
-        const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${msg.firebaseKey}`);
-        await update(messageRef, { status: 'read' });
-      }
-
-      // Обновляем lastMessage в Firestore
-      const chatRef = doc(firestoreDb, 'chats', chatidSelected);
-      const chatDoc = await getDoc(chatRef);
-      
-      if (chatDoc.exists()) {
-        const chatData = chatDoc.data();
-        if (chatData.lastMessage?.unread && chatData.lastMessage?.senderId !== userId) {
-          await updateDoc(chatRef, {
-            'lastMessage.unread': false
-          });
-        }
-      }
-    };
-
-    // Проверяем видимость страницы
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         markMessagesAsRead();
       }
     };
 
-    // Вызываем при монтировании и при изменении видимости
+    // Вызываем при открытии чата и при получении новых сообщений
     markMessagesAsRead();
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -406,7 +414,7 @@ export default function Chating() {
                   <img src={msg.file} alt="Uploaded file" className="message-image" />
                 </div>
               )}
-            </div>
+           </div>
             <div className="message-info">
               <span className="message-timestamp">{formatTimestamp(msg.timestamp)}</span>
               {msg.senderId === userId && (
@@ -424,9 +432,8 @@ export default function Chating() {
           className="context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          <button onClick={() => deleteMessage(contextMenu.messageId, contextMenu.firebaseKey)}>
+          <button onClick={() => deleteMessage(contextMenu.messageId, contextMenu.firebaseKey)}></button>
             Удалить сообщение
-          </button>
         </div>
       )}
       <div className="chating-footer">

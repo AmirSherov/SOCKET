@@ -276,6 +276,7 @@ export default function SideChatBar() {
         );
     }
 
+    // В функции selectChat добавляем обновление статуса сообщения
     const selectChat = (chatId) => {
         if (windowWidth < 600) {
             navigate(`/chating/${chatId}`);
@@ -283,6 +284,13 @@ export default function SideChatBar() {
         } else {
             dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
         }
+
+        // Обновляем статус сообщения при выборе чата
+        const chatRef = doc(firestoreDb, 'chats', chatId);
+        updateDoc(chatRef, {
+            'lastMessage.unread': false,
+            'lastMessage.status': 'read'
+        });
     };
 
     return (
@@ -338,8 +346,12 @@ export default function SideChatBar() {
                         .map(contact => (
                             <div
                                 key={contact.chatId}
-                                className={`contact-item ${chatMessages[contact.chatId]?.unread && 
-                                    chatMessages[contact.chatId]?.senderId !== user.id ? 'unread' : ''}`}
+                                className={`contact-item ${
+                                    chatMessages[contact.chatId]?.senderId !== user.id && 
+                                    (chatMessages[contact.chatId]?.unread || chatMessages[contact.chatId]?.status !== 'read') 
+                                        ? 'unread' 
+                                        : ''
+                                }`}
                                 onClick={() => {
                                     selectChat(contact.chatId);
                                     dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.name });

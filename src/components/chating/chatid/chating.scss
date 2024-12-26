@@ -13,6 +13,7 @@
     bottom: 0;
     height: 100vh;
     transition: transform 0.3s ease-in-out;
+    overflow: hidden; // Убираем вертикальный скролл
 
     &.sidebar-close {
         transform: translateX(0%);
@@ -93,8 +94,8 @@
     }
 
     .messages-container {
-        height: 100vh;
-        overflow-y: auto;
+        height: calc(100vh - 60px); // Устанавливаем высоту для скролла
+        overflow-y: auto; // Добавляем скролл только для сообщений
         padding: 20px;
         display: flex;
         flex-direction: column;

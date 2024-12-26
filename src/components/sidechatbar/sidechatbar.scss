@@ -2,7 +2,7 @@
     background-color: #17212b;
     height: 100vh;
     width:400px;
-    overflow-y: hidden;
+    overflow: hidden; // Убираем вертикальный скролл
     display: flex;
     flex-direction: column;
     border-right: 1px solid #0e1621;
@@ -114,8 +114,8 @@
         margin-top: 10px;
         padding: 15px;
         flex: 1;
-        overflow-y: auto;
-        height: calc(100vh - 120px); // вычитаем высоту поисковой строки и паддинги
+        overflow-y: auto; // Добавляем скролл только для контактов
+        height: calc(100vh - 120px); // Устанавливаем высоту для скролла
 
         &::-webkit-scrollbar {
             width: 5px;
