@@ -19,6 +19,7 @@ function ChatingHeader() {
     const { state, dispatch } = useGlobalContext();
     const navigate = useNavigate();
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     useEffect(() => {
         const handleResize = () => {
@@ -37,8 +38,28 @@ function ChatingHeader() {
         }
     };
 
-    const handleDeleteChat = async () => {
-        if (!state.selectedChat) return;
+    const handleSettingsClick = (e) => {
+        e.stopPropagation();
+        setIsSettingsOpen(!isSettingsOpen);
+    };
+
+    useEffect(() => {
+        const closeSettings = () => setIsSettingsOpen(false);
+        document.addEventListener('click', closeSettings);
+        return () => document.removeEventListener('click', closeSettings);
+    }, []);
+
+    const handleDeleteChat = async (e) => {
+        e.stopPropagation();
+        setIsSettingsOpen(false);
+        if (!state.selectedChat) {
+            toast.error('No chat selected');
+            return;
+        }
+
+        if (!window.confirm('Are you sure you want to delete this chat?')) {
+            return;
+        }
 
         try {
             const chatRef = doc(firestoreDb, 'chats', state.selectedChat);
@@ -49,12 +70,10 @@ function ChatingHeader() {
             const chatData = chatDoc.data();
             const participants = chatData.participants;
 
-            // Получаем всех пользователей
             const usersCollectionRef = collection(firestoreDb, 'users');
             const usersSnapshot = await getDocs(usersCollectionRef);
             const users = [];
             
-            // Находим нужных пользователей по их внутреннему id
             usersSnapshot.forEach(doc => {
                 const userData = doc.data();
                 if (participants.includes(userData.id)) {
@@ -65,7 +84,6 @@ function ChatingHeader() {
                 }
             });
 
-            // Обновляем контакты для каждого найденного пользователя
             const userUpdates = users.map(user => {
                 const userRef = doc(firestoreDb, 'users', user.docId);
                 const updatedContacts = (user.contacts || []).filter(
@@ -75,22 +93,17 @@ function ChatingHeader() {
                 return updateDoc(userRef, { contacts: updatedContacts });
             });
 
-            // Удаляем сообщения из Realtime Database
             const messagesRef = ref(realtimeDb, `chats/${state.selectedChat}/messages`);
             await remove(messagesRef);
 
-            // Удаляем чат из Firestore
             await deleteDoc(chatRef);
 
-            // Ждем завершения всех обновлений
             await Promise.all(userUpdates);
 
-            // После успешного удаления обнуляем выбранный чат в контек��те
             dispatch({ type: "SET_SELECTED_CHAT", payload: null });
             dispatch({ type: "SET_SELECTED_USER_NAME", payload: null });
             dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: null });
 
-            // Перенаправляем на главную
             toast.success('Chat deleted successfully');
             navigate('/');
 
@@ -151,9 +164,10 @@ function ChatingHeader() {
             <div className="chating-user-setting">
                 <IoSettings
                     className="chating-user-settings"
+                    onClick={handleSettingsClick}
                     style={{ color: "white", width: "48px", height: "48px", fontSize: "1.5rem", padding: "10px", cursor: "pointer" }}
                 />
-                <div className="chating-setting">
+                <div className={`chating-setting ${isSettingsOpen ? 'active' : ''}`}>
                     <div>
                         <span>Profile</span>
                         <span>
@@ -178,7 +192,7 @@ function ChatingHeader() {
                             <MdReport />
                         </span>
                     </div>
-                    <div onClick={handleDeleteChat}>
+                    <div onClick={handleDeleteChat} role="button" tabIndex={0}>
                         <span>Delete Chat</span>
                         <span>
                             <MdDelete />

@@ -4,6 +4,7 @@
     box-sizing: border-box;
     font-family: 'Open Sans', sans-serif;
 }
+
 .chating-container {
     background-color: #0e1621;
     width: 100%;
@@ -12,10 +13,12 @@
     bottom: 0;
     height: 100vh;
     transition: transform 0.3s ease-in-out;
+
     &.sidebar-close {
         transform: translateX(0%);
         width: 100%;
     }
+
     .chating-footer {
         display: grid;
         grid-template-columns: 1fr 5fr 1fr;
@@ -41,26 +44,16 @@
             cursor: pointer;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
-        }
 
-        .file-input-label:hover {
-            background-color: #00ff0d7e;
-            transform: scale(1.1);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            &:hover {
+                background-color: #00ff0d7e;
+                transform: scale(1.1);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            }
         }
 
         .file-input {
             display: none;
-        }
-
-        .file-input-label {
-            width: 100%;
-            height: 150px;
-            border: 2px dashed #007bff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 20px;
         }
 
         .file-input-text {
@@ -108,6 +101,7 @@
         gap: 10px;
         position: relative;
         bottom: 60px;
+
         &::-webkit-scrollbar {
             width: 5px;
         }
@@ -122,7 +116,13 @@
             padding: 10px 15px;
             border-radius: 12px;
             word-wrap: break-word;
-            user-select: none; // Предотвращаем выделение текста при длительном нажатии
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            position: relative;
 
             &.received {
                 align-self: flex-start;
@@ -133,16 +133,35 @@
 
             &.sent {
                 align-self: flex-end;
-                background-color: #2B5278;  // Changed to a blue color
+                background-color: #2B5278; // Changed to a blue color
                 color: white;
                 border-bottom-right-radius: 4px;
-                margin-left: auto;  // Ensures message stays on the right
+                margin-left: auto; // Ensures message stays on the right
             }
 
-            .message-image {
+            .message-content {
+                position: relative;
+            }
+
+            .message-timestamp {
+                display: block;
+                font-size: 0.7rem;
+                margin-top: 4px;
+                opacity: 0.7;
+                color: rgba(255, 255, 255, 0.6);
+                text-align: right;
+            }
+
+            .image-container {
+                position: relative;
+                display: inline-block;
                 max-width: 100%;
-                border-radius: 8px;
-                margin-top: 5px;
+
+                .message-image {
+                    max-width: 100%;
+                    border-radius: 8px;
+                    margin-top: 5px;
+                }
             }
 
             p {
@@ -157,7 +176,7 @@
         align-items: center;
         height: 100%;
         color: #6c757d;
-        
+
         h2 {
             text-align: center;
             font-weight: 300;
@@ -166,63 +185,77 @@
 }
 
 .context-menu {
-  position: fixed; // изменили с absolute на fixed
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 8px;
-  z-index: 1000;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  
-  // Предотвращаем выход за пределы экрана
-  @media (max-width: 768px) {
-    max-width: 200px;
-    width: auto;
-    
-    // Убедимся, что меню всегда видно
-    &.visible {
-      display: block;
-      
-      // Корректируем позицию если меню выходит за края экрана
-      &.too-right {
-        right: 10px;
-        left: auto;
-      }
-      
-      &.too-bottom {
-        bottom: 10px;
-        top: auto;
-      }
-    }
-  }
+    position: fixed; // изменили с absolute на fixed
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 
-  button {
-    width: 100%;
-    padding: 8px 12px;
-    border: none;
-    background: none;
-    text-align: left;
-    cursor: pointer;
-    
-    &:hover {
-      background-color: #f5f5f5;
-    }
-    
-    // Увеличиваем область нажатия на мобильных
+    // Предотвращаем выход за пределы экрана
     @media (max-width: 768px) {
-      padding: 12px 16px;
-      font-size: 16px; // Увеличиваем размер шрифта для лучшего касания
+        max-width: 200px;
+        width: auto;
+
+        // Убедимся, что меню всегда видно
+        &.visible {
+            display: block;
+
+            // Корректируем позицию если меню выходит за края экрана
+            &.too-right {
+                right: 10px;
+                left: auto;
+            }
+
+            &.too-bottom {
+                bottom: 10px;
+                top: auto;
+            }
+        }
     }
-  }
+
+    button {
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        background: none;
+        text-align: left;
+        cursor: pointer;
+
+        &:hover {
+            background-color: #f5f5f5;
+        }
+
+        // Увеличиваем область нажатия на мобильных
+        @media (max-width: 768px) {
+            padding: 12px 16px;
+            font-size: 16px; // Увеличиваем размер шрифта для лучшего касания
+        }
+    }
 }
 
 // Предотвращаем выделение текста при долгом нажатии
 .message {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    position: relative;
 }
 
+.download-button {
+    position: absolute;
+    top: 5px;
+    right: 0px;
+    font-size: 30px;
+    color: #007bff;
+    cursor: pointer;
+    transition: color 0.3s;
+
+    &:hover {
+        color: #0056b3;
+    }
+}

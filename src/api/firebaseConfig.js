@@ -17,4 +17,7 @@ const app = initializeApp(firebaseConfig);
 export const realtimeDb = getDatabase(app);
 export const firestoreDb = getFirestore(app);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
+const provider = new GoogleAuthProvider();
+provider.addScope('profile');
+provider.addScope('email');
+export const googleProvider = provider;

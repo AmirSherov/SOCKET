@@ -1,6 +1,6 @@
 import "./sidechatbar.scss";
 import { useGlobalContext } from "../../context";
-import { useState, useEffect} from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { firestoreDb } from '../../api/firebaseConfig';
 import { collection, query, where, doc, onSnapshot, getDocs, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
@@ -60,29 +60,60 @@ export default function SideChatBar() {
             return currentUserId === user1 ? user2 : user1;
         });
 
-        // Создаем подписку на изменения данных пользователей
+        // Создаем подписку на данные пользователей
         const usersRef = collection(firestoreDb, 'users');
         const q = query(usersRef, where("id", "in", contactUserIds));
 
-        const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "modified") {
-                    const updatedUserData = change.doc.data();
-                    
-                    // Обновляем контакты с новыми данными пользователя
-                    setContacts(prevContacts => prevContacts.map(contact => {
-                        const contactUserId = contact.chatId.split('-').find(id => id !== currentUserId);
-                        if (contactUserId === updatedUserData.id) {
-                            return {
-                                ...contact,
-                                name: updatedUserData.displayName,
-                                photoURL: updatedUserData.photoURL
-                            };
-                        }
-                        return contact;
-                    }));
+        const unsubscribeUsers = onSnapshot(q, async (snapshot) => {
+            const updates = [];
+            const userDocs = {};
+
+            // Создаем map пользователей для быстрого доступа
+            snapshot.docs.forEach(doc => {
+                userDocs[doc.data().id] = doc.data();
+            });
+
+            // Проверяем каждый контакт
+            contacts.forEach(contact => {
+                const [user1, user2] = contact.chatId.split('-');
+                const contactUserId = currentUserId === user1 ? user2 : user1;
+                const actualUserData = userDocs[contactUserId];
+
+                if (actualUserData && (
+                    contact.name !== actualUserData.displayName ||
+                    contact.photoURL !== actualUserData.photoURL
+                )) {
+                    const updatedContact = {
+                        ...contact,
+                        name: actualUserData.displayName,
+                        photoURL: actualUserData.photoURL
+                    };
+
+                    updates.push(updatedContact);
                 }
             });
+
+            // Если есть обновления, применяем их
+            if (updates.length > 0) {
+                try {
+                    const currentUserQuery = query(usersRef, where("id", "==", currentUserId));
+                    const currentUserDocs = await getDocs(currentUserQuery);
+
+                    if (!currentUserDocs.empty) {
+                        const currentUserDoc = currentUserDocs.docs[0];
+                        const updatedContacts = contacts.map(contact => {
+                            const update = updates.find(u => u.chatId === contact.chatId);
+                            return update || contact;
+                        });
+
+                        await updateDoc(currentUserDoc.ref, {
+                            contacts: updatedContacts
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error updating contacts:", error);
+                }
+            }
         });
 
         return () => unsubscribeUsers();
@@ -118,27 +149,27 @@ export default function SideChatBar() {
         try {
             const usersRef = collection(firestoreDb, 'users');
             const querySnapshot = await getDocs(usersRef);
-            
+
             const users = [];
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
                 if (userData && userData.nickname && userData.id !== currentUserId) {
-                    const searchValue = searchTerm.startsWith('@') 
-                        ? searchTerm.toLowerCase() 
+                    const searchValue = searchTerm.startsWith('@')
+                        ? searchTerm.toLowerCase()
                         : '@' + searchTerm.toLowerCase();
-                    
+
                     if (userData.nickname.toLowerCase().includes(searchValue.toLowerCase())) {
                         users.push({
                             id: userData.id,
                             nickname: userData.nickname,
                             photoURL: userData.photoURL,
                             displayName: userData.displayName,  // Add displayName to the user object
-                            docId: doc.id 
+                            docId: doc.id
                         });
                     }
                 }
             });
-            
+
             setFilteredUsers(users);
         } catch (error) {
             toast.error('Error searching users');
@@ -147,7 +178,7 @@ export default function SideChatBar() {
 
     const handleUserSelect = async (selectedUser) => {
         const chatId = [currentUserId, selectedUser.id].sort().join('-');
-        
+
         try {
             // Найдем документы обоих пользователей
             const usersRef = collection(firestoreDb, 'users');
@@ -158,7 +189,7 @@ export default function SideChatBar() {
 
             const currentUserDoc = currentUserDocs.docs[0];
             const selectedUserDoc = selectedUserDocs.docs[0];
-            
+
             const currentUserData = currentUserDoc.data();
             const selectedUserData = selectedUserDoc.data();
 
@@ -195,7 +226,7 @@ export default function SideChatBar() {
 
                 // Обновляем контакты только если их нет
                 const updatePromises = [];
-                
+
                 if (!currentUserHasChat) {
                     updatePromises.push(
                         updateDoc(doc(firestoreDb, 'users', currentUserDoc.id), {
@@ -235,21 +266,23 @@ export default function SideChatBar() {
     }
 
     const selectChat = (chatId) => {
-        if(windowWidth < 600){
+        if (windowWidth < 600) {
             navigate(`/chating/${chatId}`);
-        } else{
+        } else {
             dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
         }
     };
 
     return (
         <div className={`side-chat-bar-container ${state.sidebarClose ? "sidebar-close-chat" : ""}`}>
-            <div onClick={() => dispatch({ type: 'SET_IS_BURGER_OPEN', payload: !state.isBurgerOpen })} 
-                 className={`burger-menu ${state.isBurgerOpen ? "open" : ""}`}>
-                <div className="burger-line"></div>
-                <div className="burger-line"></div>
-                <div className="burger-line"></div>
-            </div>
+            {!state.isBurgerOpen &&
+                <div onClick={() => dispatch({ type: 'SET_IS_BURGER_OPEN', payload: !state.isBurgerOpen })}
+                    className={`burger-menu ${state.isBurgerOpen ? "open" : ""}`}>
+                    <div className="burger-line"></div>
+                    <div className="burger-line"></div>
+                    <div className="burger-line"></div>
+                </div>
+            }
             <div className="search-container">
                 <input
                     type="text"
@@ -269,8 +302,8 @@ export default function SideChatBar() {
                                 className="search-result-item"
                                 onClick={() => handleUserSelect(user)}
                             >
-                                <img 
-                                    src={user.photoURL || 'default-avatar.png'} 
+                                <img
+                                    src={user.photoURL || 'default-avatar.png'}
                                     alt={user.nickname}
                                     className="user-avatar"
                                 />
@@ -302,7 +335,7 @@ export default function SideChatBar() {
                                 <div className="contact-name">{contact.name}</div>
                                 <div className="contact-details">
                                     <div className="contact-last-message">
-                                       {chatMessages[contact.chatId]?.senderId === user.id ? 'Вы: ' : ''} {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
+                                        {chatMessages[contact.chatId]?.senderId === user.id ? 'Вы: ' : ''} {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
                                     </div>
                                     {chatMessages[contact.chatId]?.timestamp && (
                                         <div className="contact-time">

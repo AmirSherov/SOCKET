@@ -2,13 +2,32 @@ import "./infosidebar.scss";
 import { FaUserCircle, FaComments, FaCog, FaAddressBook } from "react-icons/fa";
 import { useGlobalContext } from "../../context";
 import AccauntSettings from "../accauntSettings/index"
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+
 export default function InfoSideBar() {
     const [isOpen, setIsOpen] = useState(false);
-    const { state } = useGlobalContext();
+    const { state, dispatch } = useGlobalContext();
+    const sidebarRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (window.innerWidth <= 600 && 
+                sidebarRef.current && 
+                !sidebarRef.current.contains(event.target) && 
+                state.isBurgerOpen) {
+                dispatch({ type: 'SET_IS_BURGER_OPEN', payload: state.isBurgerOpen ? false : true });
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [state.isBurgerOpen, dispatch]);
+
     return (
         <>
-            <div className={`info-side-bar-container ${state.isBurgerOpen ? "isBurgerOpen" : ""}`}>
+            <div ref={sidebarRef} className={`info-side-bar-container ${state.isBurgerOpen ? "isBurgerOpen" : ""}`}>
                 <div className="sidebar-item-logo">
                     <div className="item-text"><i>SOCKET</i></div>
                 </div>

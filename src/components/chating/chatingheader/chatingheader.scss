@@ -31,6 +31,9 @@
             z-index: 99999;
             cursor: pointer;
             transition: all 0.3s ease-in-out;
+            touch-action: manipulation; // Optimize for touch
+            min-width: 44px; // Minimum touch target size
+            min-height: 44px;
 
             &:hover {
                 transform: rotate(90deg);
@@ -54,15 +57,24 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             transition: opacity 0.3s ease, transform 0.3s ease;
             
+            &.active {
+                display: block;
+            }
+
             div {
                 display: flex;
                 justify-content: space-between;
                 padding: 5px 10px;
                 cursor: pointer;
                 border-radius: 5px;
+                -webkit-tap-highlight-color: transparent; // Remove tap highlight on mobile
 
                 &:hover {
                     padding-left: 20px;
+                }
+
+                &:active {
+                    background-color: rgba(255, 255, 255, 0.1); // Feedback for mobile touch
                 }
 
                 span {

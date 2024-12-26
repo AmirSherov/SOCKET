@@ -48,7 +48,7 @@ export default function AccountSettings({ isOpen, onClose }) {
 
             const usersRef = collection(firestoreDb, 'users');
             
-            // Only check for nickname uniqueness if it was changed
+            // Проверка уникальности никнейма
             if (nickname !== state.user.nickname) {
                 const nicknameQuery = query(usersRef, where("nickname", "==", nickname));
                 const querySnapshot = await getDocs(nicknameQuery);
@@ -71,39 +71,7 @@ export default function AccountSettings({ isOpen, onClose }) {
                     photoURL: avatar,
                 };
 
-                // Обновляем профиль пользователя
                 await updateDoc(userDoc.ref, updatedData);
-
-                // Получаем всех пользователей, у которых есть контакты
-                const allUsersQuery = query(collection(firestoreDb, 'users'));
-                const allUsersSnapshot = await getDocs(allUsersQuery);
-
-                // Обновляем данные пользователя в контактах других пользователей
-                const updatePromises = allUsersSnapshot.docs.map(async (doc) => {
-                    const userData = doc.data();
-                    if (userData.contacts && Array.isArray(userData.contacts)) {
-                        const updatedContacts = userData.contacts.map(contact => {
-                            const [user1, user2] = contact.chatId.split('-');
-                            if (user1 === state.user.id || user2 === state.user.id) {
-                                return {
-                                    ...contact,
-                                    name: username,
-                                    photoURL: avatar
-                                };
-                            }
-                            return contact;
-                        });
-
-                        // Обновляем только если были изменения
-                        if (JSON.stringify(updatedContacts) !== JSON.stringify(userData.contacts)) {
-                            return updateDoc(doc.ref, { contacts: updatedContacts });
-                        }
-                    }
-                    return Promise.resolve();
-                });
-
-                await Promise.all(updatePromises);
-
                 toast.success('Profile updated successfully!');
                 onClose();
                 window.location.reload();

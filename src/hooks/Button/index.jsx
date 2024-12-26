@@ -1,11 +1,11 @@
 import "./buttonhook.scss";
 import { useNavigate } from "react-router-dom";
 
-export default function Button({ onClick, children, type = 'button', ...props }) {
+export default function Button({ onclick, children, type = 'button', ...props }) {
   return (
     <button
       type={type}
-      onClick={onClick}
+      onClick={onclick}
       {...props}
     >
       {children}

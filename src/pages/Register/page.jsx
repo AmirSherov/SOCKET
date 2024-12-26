@@ -4,7 +4,7 @@ import { auth, googleProvider } from '../../api/firebaseConfig';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGlobalContext } from '../../context';
-import { doc, setDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import Button from '../../hooks/Button';
 import { firestoreDb } from '../../api/firebaseConfig';
 import './auth.scss';
@@ -44,7 +44,7 @@ export default function Register() {
       await setDoc(doc(firestoreDb, 'users', userData.uid), {
         id: userData.uid,
         email: userData.email,
-        password: password, // Добавляем пароль (небезопасно!)
+        password: password,   
         displayName: username || userData.displayName || email.split('@')[0],
         nickname: nickname,
         photoURL: userData.photoURL || '',
@@ -91,22 +91,66 @@ export default function Register() {
 
   const signInWithGoogle = async () => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      await createFirestoreUser(result.user);
-      dispatch({ 
-        type: 'SET_USER', 
-        payload: {
-          email: result.user.email,
-          id: result.user.uid,
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL
-        } 
-      });
-      navigate('/');
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        let finalNickname;
+
+        const usersRef = collection(firestoreDb, 'users');
+        const q = query(usersRef, where("id", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            const defaultNickname = '@' + user.email.split('@')[0];
+            
+            const nicknameQuery = query(usersRef, where("nickname", "==", defaultNickname));
+            const nicknameSnapshot = await getDocs(nicknameQuery);
+            
+            finalNickname = nicknameSnapshot.empty 
+                ? defaultNickname 
+                : `${defaultNickname}${Math.floor(Math.random() * 1000)}`;
+
+            await setDoc(doc(firestoreDb, 'users', user.uid), {
+                id: user.uid,
+                email: user.email,
+                displayName: user.displayName || 'User',
+                nickname: finalNickname,
+                photoURL: user.photoURL || '',
+                contacts: [],
+                bio: '',
+                createdAt: new Date().toISOString()
+            });
+
+            dispatch({
+                type: 'SET_USER',
+                payload: {
+                    email: user.email,
+                    id: user.uid,
+                    nickname: finalNickname,
+                    displayName: user.displayName || 'User',
+                    photoURL: user.photoURL || ''
+                }
+            });
+        } else {
+            const userData = querySnapshot.docs[0].data();
+            dispatch({
+                type: 'SET_USER',
+                payload: {
+                    email: user.email,
+                    id: user.uid,
+                    nickname: userData.nickname,
+                    displayName: userData.displayName,
+                    photoURL: userData.photoURL
+                }
+            });
+        }
+
+        localStorage.setItem('userId', user.uid);
+        navigate('/');
     } catch (error) {
-      setError(error.message);
+        console.error("Error during Google sign-in:", error);
+        setError(error.message);
     }
-  };
+};
 
   return (
     <div className="auth-container">
@@ -148,7 +192,6 @@ export default function Register() {
           width="100%"
           height="40px"
           bg="#4285F4"
-          textColor="#fff"
         >
           Sign up with Google
         </Button>

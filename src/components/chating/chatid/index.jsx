@@ -11,8 +11,32 @@ import { ref, push, onChildAdded, remove, off, onChildRemoved } from 'firebase/d
 import { doc, getDoc, updateDoc, arrayUnion, collection, getDocs, setDoc } from 'firebase/firestore';
 import Loader from '../../ui/Loader';
 import toast from 'react-hot-toast';
-
+import { MdOutlineFileDownload } from "react-icons/md";
 const client = init("A9SyIIcLaSvaAOwQJBrC4z");
+
+const formatTimestamp = (timestamp) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+const downloadImage = async (url, filename) => {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    console.error('Download failed:', error);
+    toast.error('Failed to download image');
+  }
+};
 
 export default function Chating() {
   const { state } = useGlobalContext();
@@ -188,15 +212,11 @@ export default function Chating() {
 
   // Добавляем обработчики touch событий
   const handleTouchStart = (e, messageId, senderId, firebaseKey) => {
-    e.preventDefault();
     setTouchStartTime(Date.now());
     
     const timer = setTimeout(() => {
       if (senderId === userId) {
         const touch = e.touches[0];
-        const element = document.getElementById(`message-${messageId}`);
-        const rect = element.getBoundingClientRect();
-        
         setContextMenu({
           visible: true,
           x: touch.pageX,
@@ -211,7 +231,6 @@ export default function Chating() {
   };
 
   const handleTouchEnd = (e) => {
-    e.preventDefault();
     if (touchTimer) {
       clearTimeout(touchTimer);
     }
@@ -223,7 +242,6 @@ export default function Chating() {
   };
 
   const handleTouchMove = (e) => {
-    e.preventDefault();
     if (touchTimer) {
       clearTimeout(touchTimer);
       setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
@@ -250,7 +268,7 @@ export default function Chating() {
           lastMessage: null
         });
       } else {
-        // Если есть другие сообщения, обновляем lastMessage на последнее сообщен��е
+        // Если есть другие сообщения, обновляем lastMessage на последнее сообщение
         const lastMsg = remainingMessages[remainingMessages.length - 1];
         await updateDoc(chatRef, {
           lastMessage: {
@@ -308,8 +326,21 @@ export default function Chating() {
             onTouchEnd={handleTouchEnd}
             onTouchMove={handleTouchMove}
           >
-            {msg.text && <p>{msg.text}</p>}
-            {msg.file && <img src={msg.file} alt="Uploaded file" className="message-image" />}
+            <div className="message-content">
+              {msg.text && <p>{msg.text}</p>}
+              {msg.file && (
+                <div className="image-container">
+                    <MdOutlineFileDownload
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadImage(msg.file, `image-${msg.id}.jpg`);
+                    }}
+                    className="download-button"/>
+                  <img src={msg.file} alt="Uploaded file" className="message-image" />
+                </div>
+              )}
+            </div>
+            <div className="message-timestamp">{formatTimestamp(msg.timestamp)}</div>
           </div>
         ))}
         <div ref={messagesEndRef} />
