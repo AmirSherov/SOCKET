@@ -175,7 +175,12 @@ export default function SideChatBar() {
             toast.error('Error searching users');
         }
     };
-
+    const extendedContacts = [...contacts, ...Array(50).fill().map((_, i) => ({
+        ...contacts[i % contacts.length], // Дублирует существующий контакт
+        chatId: `test-${i}`, // Генерирует уникальный `chatId` для каждого нового контакта
+        name: `Test User ${i + 1}`, // Генерирует уникальное имя
+        photoURL: 'default-avatar.png' // Устанавливает аватар по умолчанию
+    }))];
     const handleUserSelect = async (selectedUser) => {
         const chatId = [currentUserId, selectedUser.id].sort().join('-');
 
@@ -316,6 +321,7 @@ export default function SideChatBar() {
             </div>
             <div className="side-chat-bar-header">
                 {contacts.length > 0 ? (
+                    // как сделать так что бы контакты увеличились на 50 для проверки скролла
                     contacts.map(contact => (
                         <div
                             key={contact.chatId}
