@@ -1,11 +1,11 @@
 {
-  "short_name": "SOCKET",
-  "name": "SOCKET M2.0",
+  "short_name": "Telegram 2.0",
+  "name": "Telegram 2.0",
   "icons": [
     {
       "src": "logo.png",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "type": "image/webp"
     },
     {
       "src": "logo.png",
@@ -14,7 +14,11 @@
     },
     {
       "src": "logo.png",
-      "type": "image/png",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.webp",
+      "type": "image/webp",
       "sizes": "512x512"
     }
   ],
