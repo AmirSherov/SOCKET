@@ -285,7 +285,6 @@ export default function SideChatBar() {
             dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
         }
 
-        // Обновляем статус сообщения при выборе чата
         const chatRef = doc(firestoreDb, 'chats', chatId);
         updateDoc(chatRef, {
             'lastMessage.unread': false,

@@ -33,6 +33,10 @@ function ChatingHeader() {
     const handleArrowClick = () => {
         if (windowWidth < 1050) {
             navigate('/');
+            dispatch({ type: "SET_SELECTED_CHAT", payload: null });
+            dispatch({ type: "SET_SELECTED_USER_NAME", payload: null });
+            dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: null });
+            dispatch({ type: "SET_CURRENT_CHAT", payload: null });
         } else {
             dispatch({ type: "SIDEBAR_CLOSE", payload: !state.sidebarClose });
         }
@@ -103,7 +107,6 @@ function ChatingHeader() {
             dispatch({ type: "SET_SELECTED_CHAT", payload: null });
             dispatch({ type: "SET_SELECTED_USER_NAME", payload: null });
             dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: null });
-
             toast.success('Chat deleted successfully');
             navigate('/');
 
