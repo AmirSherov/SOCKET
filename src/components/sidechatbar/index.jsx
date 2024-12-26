@@ -268,6 +268,7 @@ export default function SideChatBar() {
     const selectChat = (chatId) => {
         if (windowWidth < 600) {
             navigate(`/chating/${chatId}`);
+            dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
         } else {
             dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
         }
