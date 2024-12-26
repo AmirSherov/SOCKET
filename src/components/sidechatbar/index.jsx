@@ -7,7 +7,7 @@ import { collection, query, where, doc, onSnapshot, getDocs, getDoc, setDoc, upd
 import Loader from '../ui/Loader';
 import toast from 'react-hot-toast';
 import { executeMutation } from "firebase/data-connect";
-
+import { initializeNotifications } from "../../api/firebaseConfig";
 export default function SideChatBar() {
     const { state, dispatch } = useGlobalContext();
     const [contacts, setContacts] = useState([]);
@@ -29,6 +29,11 @@ export default function SideChatBar() {
             window.removeEventListener('resize', handleResize);
         };
     })
+    useEffect(() => {
+        if (user?.id) {
+          initializeNotifications(user.id);
+        }
+      }, [user?.id]);
     useEffect(() => {
         if (!user?.id) {
             setLoading(false);
@@ -140,6 +145,10 @@ export default function SideChatBar() {
             unsubscribers.forEach(unsub => unsub && unsub());
         };
     }, [contacts]);
+
+    useEffect(() => {
+        initializeNotifications(currentUserId);
+    }, []);
 
     const searchUsers = async (searchTerm) => {
         if (!searchTerm.trim()) {

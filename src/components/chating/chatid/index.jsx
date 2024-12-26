@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./chating.scss";
-import { useParams } from "react-router-dom";
+import { useParams , useNavigate } from "react-router-dom";
 import { useGlobalContext } from "../../../context";
 import { FaCloudUploadAlt } from "react-icons/fa";
 import { IoSend } from "react-icons/io5";
@@ -13,6 +13,7 @@ import Loader from '../../ui/Loader';
 import toast from 'react-hot-toast';
 import { MdOutlineFileDownload } from "react-icons/md";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
+import { getMessaging, onMessage } from "firebase/messaging";
 const client = init("A9SyIIcLaSvaAOwQJBrC4z");
 
 const formatTimestamp = (timestamp) => {
@@ -25,7 +26,7 @@ const downloadImage = async (url, filename) => {
     const response = await fetch(url);
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = objectUrl;
     link.download = filename;
@@ -53,7 +54,7 @@ export default function Chating() {
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, messageId: null });
   const [touchTimer, setTouchTimer] = useState(null);
   const [touchStartTime, setTouchStartTime] = useState(0);
-
+  const navigate = useNavigate();
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -109,7 +110,7 @@ export default function Chating() {
               ...snapshot.val(),
               firebaseKey: snapshot.key
             };
-            setMessages(prev => prev.map(msg => 
+            setMessages(prev => prev.map(msg =>
               msg.firebaseKey === snapshot.key ? changedMessage : msg
             ));
           }
@@ -140,6 +141,39 @@ export default function Chating() {
       setFileName("");
       setMessage("");
     };
+  }, [chatidSelected]);
+
+  useEffect(() => {
+    const messaging = getMessaging();
+    const unsubscribe = onMessage(messaging, (payload) => {
+      if (!payload.notification) return;
+      
+      const { title, body } = payload.notification;
+      const { senderId, chatId } = payload.data || {};
+  
+      // Показываем уведомление только если чат не открыт
+      if (chatId !== chatidSelected) {
+        toast.custom((t) => (
+          <div className="notification-toast" onClick={() => {
+            // При клике на уведомление открываем соответствующий чат
+            if (chatId) {
+              navigate(`/chating/${chatId}`);
+            }
+          }}>
+            <img src="/logo.webp" alt="avatar" />
+            <div>
+              <h4>{title}</h4>
+              <p>{body}</p>
+            </div>
+          </div>
+        ), {
+          duration: 4000,
+          position: 'top-right'
+        });
+      }
+    });
+  
+    return () => unsubscribe();
   }, [chatidSelected]);
 
   const openFilestack = () => {
@@ -183,16 +217,16 @@ export default function Chating() {
       // Define messagesRef once at the beginning
       const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
       await push(messagesRef, newMessage);
-      
+
       const chatRef = doc(firestoreDb, 'chats', chatidSelected);
       const chatDoc = await getDoc(chatRef);
 
       if (!chatDoc.exists()) {
         const recipientId = chatidSelected.replace(userId, '').replace('-', '');
-        
+
         // ...existing chat creation code...
       }
-    
+
       // Update lastMessage
       await updateDoc(chatRef, {
         lastMessage: {
@@ -222,7 +256,7 @@ export default function Chating() {
       // Помечаем последнее сообщение как прочитанное в Firestore
       const chatRef = doc(firestoreDb, 'chats', chatidSelected);
       const chatDoc = await getDoc(chatRef);
-      
+
       if (chatDoc.exists()) {
         const chatData = chatDoc.data();
         if (chatData.lastMessage?.senderId !== userId && chatData.lastMessage?.unread) {
@@ -234,16 +268,16 @@ export default function Chating() {
       }
 
       // Помечаем все сообщения как прочитанные в Realtime Database
-      const unreadMessages = messages.filter(msg => 
-        msg.senderId !== userId && 
+      const unreadMessages = messages.filter(msg =>
+        msg.senderId !== userId &&
         (msg.unread || msg.status !== 'read')
       );
 
       for (const msg of unreadMessages) {
         const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${msg.firebaseKey}`);
-        await update(messageRef, { 
+        await update(messageRef, {
           status: 'read',
-          unread: false 
+          unread: false
         });
       }
     } catch (error) {
@@ -269,7 +303,7 @@ export default function Chating() {
   // Добавляем обработчики touch событий
   const handleTouchStart = (e, messageId, senderId, firebaseKey) => {
     setTouchStartTime(Date.now());
-    
+
     const timer = setTimeout(() => {
       if (senderId === userId) {
         const touch = e.touches[0];
@@ -282,7 +316,7 @@ export default function Chating() {
         });
       }
     }, 500);
-    
+
     setTouchTimer(timer);
   };
 
@@ -290,7 +324,7 @@ export default function Chating() {
     if (touchTimer) {
       clearTimeout(touchTimer);
     }
-    
+
     // Если касание было коротким, не показываем меню
     if (Date.now() - touchStartTime < 500) {
       setContextMenu({ visible: false, x: 0, y: 0, messageId: null });
@@ -313,10 +347,10 @@ export default function Chating() {
       // После удаления сообщения проверяем, остались ли ещё сообщения
       const chatRef = doc(firestoreDb, 'chats', chatidSelected);
       const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
-      
+
       // Получаем все оставшиеся сообщения
       const remainingMessages = messages.filter(msg => msg.id !== messageId);
-      
+
       // Если сообщений больше нет или последнее сообщение было удалено
       if (remainingMessages.length === 0) {
         // Обновляем lastMessage на null
@@ -405,16 +439,16 @@ export default function Chating() {
               {msg.text && <p>{msg.text}</p>}
               {msg.file && (
                 <div className="image-container">
-                    <MdOutlineFileDownload
+                  <MdOutlineFileDownload
                     onClick={(e) => {
                       e.stopPropagation();
                       downloadImage(msg.file, `image-${msg.id}.jpg`);
                     }}
-                    className="download-button"/>
+                    className="download-button" />
                   <img src={msg.file} alt="Uploaded file" className="message-image" />
                 </div>
               )}
-           </div>
+            </div>
             <div className="message-info">
               <span className="message-timestamp">{formatTimestamp(msg.timestamp)}</span>
               {msg.senderId === userId && (
@@ -433,7 +467,7 @@ export default function Chating() {
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           <button onClick={() => deleteMessage(contextMenu.messageId, contextMenu.firebaseKey)}></button>
-            Удалить сообщение
+          Удалить сообщение
         </div>
       )}
       <div className="chating-footer">
