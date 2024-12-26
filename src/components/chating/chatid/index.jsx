@@ -14,8 +14,8 @@ import toast from 'react-hot-toast';
 import { MdOutlineFileDownload } from "react-icons/md";
 import { BsCheck, BsCheckAll } from "react-icons/bs";
 import { getMessaging, onMessage } from "firebase/messaging";
+import { initializeNotifications } from "../../../api/firebaseConfig";
 const client = init("A9SyIIcLaSvaAOwQJBrC4z");
-
 const formatTimestamp = (timestamp) => {
   const date = new Date(timestamp);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -198,6 +198,20 @@ export default function Chating() {
 
     return () => unsubscribe();
   }, [chatidSelected]);
+
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        if (userId) {
+          await initializeNotifications(userId);
+        }
+      } catch (error) {
+        console.error('Ошибка инициализации уведомлений:', error);
+      }
+    };
+
+    initNotifications();
+  }, [userId]);
 
   const openFilestack = () => {
     const options = {

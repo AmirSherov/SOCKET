@@ -40,47 +40,50 @@ export const initializeNotifications = async (userId) => {
       return;
     }
 
-    // Register service worker first
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/'
-      });
-      
+      // Ждем регистрации и активации Service Worker
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await navigator.serviceWorker.ready;
+
       const permission = await Notification.requestPermission();
       
       if (permission === 'granted') {
-        const token = await getToken(messaging, {
-          serviceWorkerRegistration: registration,
-          vapidKey: 'BIfIc5Dr7hpbQe4sF0V_uFyKSrkjSqmup4JH3lwGNCNd00oJDqkxxAV8SSAVcSanY2DUXQmDTA4CtDx_ER1kOGE'
-        });
-
-        if (token) {
-          const usersRef = collection(firestoreDb, 'users');
-          const q = query(usersRef, where("id", "==", userId));
-          const querySnapshot = await getDocs(q);
-
-          if (!querySnapshot.empty) {
-            const userDoc = querySnapshot.docs[0];
-            await updateDoc(doc(firestoreDb, 'users', userDoc.id), {
-              fcmToken: token
-            });
-            console.log('Notification token saved successfully');
-          }
+        // Проверяем существующую подписку
+        const existingSubscription = await registration.pushManager.getSubscription();
+        if (existingSubscription) {
+          await existingSubscription.unsubscribe();
         }
-      } else {
-        console.log('Permission denied');
+
+        try {
+          const token = await getToken(messaging, {
+            serviceWorkerRegistration: registration,
+            vapidKey: 'BIfIc5Dr7hpbQe4sF0V_uFyKSrkjSqmup4JH3lwGNCNd00oJDqkxxAV8SSAVcSanY2DUXQmDTA4CtDx_ER1kOGE'
+          });
+
+          if (token) {
+            const usersRef = collection(firestoreDb, 'users');
+            const q = query(usersRef, where("id", "==", userId));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+              const userDoc = querySnapshot.docs[0];
+              await updateDoc(doc(firestoreDb, 'users', userDoc.id), {
+                fcmToken: token
+              });
+              console.log('Токен уведомлений успешно сохранен');
+              return token;
+            }
+          }
+        } catch (tokenError) {
+          console.error('Ошибка получения токена:', tokenError);
+          throw tokenError;
+        }
       }
     }
-
-    // Добавляем слушатель обновления токена
-    messaging.onTokenRefresh(async () => {
-      const newToken = await getToken(messaging);
-      await updateNotificationToken(userId, newToken);
-    });
-
   } catch (error) {
     console.error('Ошибка инициализации уведомлений:', error);
     toast.error('Не удалось настроить уведомления');
+    throw error;
   }
 };
 

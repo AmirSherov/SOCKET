@@ -12,6 +12,16 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// Добавляем обработчик установки
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+// Добавляем обработчик активации
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title || 'New Message';
   const notificationOptions = {
