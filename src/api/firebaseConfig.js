@@ -28,33 +28,59 @@ provider.addScope('email');
 export const googleProvider = provider;
 
 export const initializeNotifications = async (userId) => {
+  if (!checkNotificationSupport()) {
+    toast.error('Ваш браузер не поддерживает уведомления');
+    return;
+  }
+
   try {
-    const permission = await Notification.requestPermission();
-    
-    if (permission === 'granted') {
-      const token = await getToken(messaging, {
-        vapidKey: 'BIfIc5Dr7hpbQe4sF0V_uFyKSrkjSqmup4JH3lwGNCNd00oJDqkxxAV8SSAVcSanY2DUXQmDTA4CtDx_ER1kOGE'
-      });
-
-      if (token) {
-        const usersRef = collection(firestoreDb, 'users');
-        const q = query(usersRef, where("id", "==", userId));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          const userDoc = querySnapshot.docs[0];
-          await updateDoc(doc(firestoreDb, 'users', userDoc.id), {
-            fcmToken: token
-          });
-          console.log('Notification token saved successfully');
-        }
-      }
-    } else {
-      toast.error('Для получения уведомлений необходимо предоставить разрешение');
+    const existingPermission = Notification.permission;
+    if (existingPermission === 'denied') {
+      toast.error('Вы заблокировали уведомления. Пожалуйста, измените настройки браузера');
+      return;
     }
+
+    // Register service worker first
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+        scope: '/'
+      });
+      
+      const permission = await Notification.requestPermission();
+      
+      if (permission === 'granted') {
+        const token = await getToken(messaging, {
+          serviceWorkerRegistration: registration,
+          vapidKey: 'BIfIc5Dr7hpbQe4sF0V_uFyKSrkjSqmup4JH3lwGNCNd00oJDqkxxAV8SSAVcSanY2DUXQmDTA4CtDx_ER1kOGE'
+        });
+
+        if (token) {
+          const usersRef = collection(firestoreDb, 'users');
+          const q = query(usersRef, where("id", "==", userId));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            await updateDoc(doc(firestoreDb, 'users', userDoc.id), {
+              fcmToken: token
+            });
+            console.log('Notification token saved successfully');
+          }
+        }
+      } else {
+        console.log('Permission denied');
+      }
+    }
+
+    // Добавляем слушатель обновления токена
+    messaging.onTokenRefresh(async () => {
+      const newToken = await getToken(messaging);
+      await updateNotificationToken(userId, newToken);
+    });
+
   } catch (error) {
     console.error('Ошибка инициализации уведомлений:', error);
-    toast.error('Ошибка при настройке уведомлений');
+    toast.error('Не удалось настроить уведомления');
   }
 };
 

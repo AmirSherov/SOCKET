@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useGlobalContext } from '../../context';
 import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, googleProvider, firestoreDb } from '../../api/firebaseConfig';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 import Button from '../../hooks/Button';
 import './auth.scss';
 
@@ -37,6 +37,26 @@ export default function Login() {
 
     loadUsers();
   }, []);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Добавляем инициализацию уведомлений после успешного входа
+      await initializeNotifications(user.uid);
+      
+      dispatch({
+        type: 'SET_USER',
+        payload: user,
+      });
+      localStorage.setItem('userId', user.id);
+      navigate('/', { replace: true });
+    } catch (error) {
+      setError(error.message);
+    }
+  };
 
   const handleSubmit = async (e) => {
     if (e) {
@@ -110,7 +130,7 @@ export default function Login() {
         {loading ? (
           <p>Loading users...</p>
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleLogin}>
             <input
               type="email"
               placeholder="Email"

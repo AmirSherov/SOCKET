@@ -1,25 +1,26 @@
 {
-  "short_name": "SOCKET",
-  "name": "SOCKET M2.0",
+  "short_name": "Telegram 2.0",
+  "name": "Telegram 2.0",
   "icons": [
     {
       "src": "logo.webp",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
+      "type": "image/webp"
     },
     {
       "src": "logo.webp",
-      "type": "image/png",
+      "type": "image/webp",
       "sizes": "192x192"
     },
     {
       "src": "logo.webp",
-      "type": "image/png",
+      "type": "image/webp",
       "sizes": "512x512"
     }
   ],
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "background_color": "#ffffff",
+  "gcm_sender_id": "52195159082"
 }

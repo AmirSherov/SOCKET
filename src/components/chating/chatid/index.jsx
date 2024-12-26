@@ -176,6 +176,29 @@ export default function Chating() {
     return () => unsubscribe();
   }, [chatidSelected]);
 
+  useEffect(() => {
+    const messaging = getMessaging();
+    const unsubscribe = onMessage(messaging, (payload) => {
+      // Проверяем, не находимся ли мы уже в чате отправителя
+      if (payload.data && payload.data.chatId !== chatidSelected) {
+        toast.custom((t) => (
+          <div className="notification-toast" onClick={() => {
+            navigate(`/chating/${payload.data.chatId}`);
+            toast.dismiss(t.id);
+          }}>
+            <img src={payload.data.senderPhoto || "/logo.webp"} alt="avatar" />
+            <div>
+              <h4>{payload.notification.title}</h4>
+              <p>{payload.notification.body}</p>
+            </div>
+          </div>
+        ));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [chatidSelected]);
+
   const openFilestack = () => {
     const options = {
       accept: ['image/*'],
