@@ -445,8 +445,9 @@ export default function Chating() {
         <div
           className="context-menu"
           style={{ top: contextMenu.y, left: contextMenu.x }}
+          onClick={() => deleteMessage(contextMenu.messageId, contextMenu.firebaseKey)}
         >
-          <button onClick={() => deleteMessage(contextMenu.messageId, contextMenu.firebaseKey)}></button>
+          <button className="delete-button"></button>
           Удалить сообщение
         </div>
       )}
