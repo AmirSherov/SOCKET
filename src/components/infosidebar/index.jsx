@@ -11,17 +11,18 @@ export default function InfoSideBar() {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (window.innerWidth <= 600 && 
-                sidebarRef.current && 
+            if (sidebarRef.current && 
                 !sidebarRef.current.contains(event.target) && 
                 state.isBurgerOpen) {
-                dispatch({ type: 'SET_IS_BURGER_OPEN', payload: state.isBurgerOpen ? false : true });
+                dispatch({ type: 'SET_IS_BURGER_OPEN', payload: false });
             }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
         };
     }, [state.isBurgerOpen, dispatch]);
 
