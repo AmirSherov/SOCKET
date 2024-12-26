@@ -36,7 +36,7 @@ export default function MainPage() {
                 } else {
                     // Если пользователь не найден
                     console.error('User not found');
-                    navigate('/login');
+                    // navigate('/login');
                 }
             } catch (error) {
                 console.error('Error loading user:', error);
