@@ -3,11 +3,10 @@ import { useGlobalContext } from "../../context";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { firestoreDb } from '../../api/firebaseConfig';
-import { collection, query, where, doc, onSnapshot, getDocs, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, onSnapshot, getDocs, setDoc, updateDoc, getDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import Loader from '../ui/Loader';
 import toast from 'react-hot-toast';
-import { executeMutation } from "firebase/data-connect";
-import { initializeNotifications } from "../../api/firebaseConfig";
+
 export default function SideChatBar() {
     const { state, dispatch } = useGlobalContext();
     const [contacts, setContacts] = useState([]);
@@ -29,11 +28,6 @@ export default function SideChatBar() {
             window.removeEventListener('resize', handleResize);
         };
     })
-    useEffect(() => {
-        if (user?.id) {
-          initializeNotifications(user.id);
-        }
-      }, [user?.id]);
     useEffect(() => {
         if (!user?.id) {
             setLoading(false);
@@ -146,12 +140,8 @@ export default function SideChatBar() {
         };
     }, [contacts]);
 
-    useEffect(() => {
-        initializeNotifications(currentUserId);
-    }, []);
-
     const searchUsers = async (searchTerm) => {
-        if (!searchTerm.trim()) {
+        if (!searchTerm.trim() || !searchTerm.startsWith('@') || searchTerm.length <= 1) {
             setFilteredUsers([]);
             return;
         }
@@ -163,17 +153,15 @@ export default function SideChatBar() {
             const users = [];
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
-                if (userData && userData.nickname && userData.id !== currentUserId) {
-                    const searchValue = searchTerm.startsWith('@')
-                        ? searchTerm.toLowerCase()
-                        : '@' + searchTerm.toLowerCase();
-
-                    if (userData.nickname.toLowerCase().includes(searchValue.toLowerCase())) {
+                if (userData && userData.id !== currentUserId) {
+                    const searchValue = searchTerm.substring(1).toLowerCase(); // Remove '@' for search
+                    const displayNameMatch = userData.displayName?.toLowerCase().includes(searchValue);
+                    
+                    if (displayNameMatch) {
                         users.push({
                             id: userData.id,
-                            nickname: userData.nickname,
                             photoURL: userData.photoURL,
-                            displayName: userData.displayName,  // Add displayName to the user object
+                            displayName: userData.displayName,
                             docId: doc.id
                         });
                     }
@@ -185,6 +173,7 @@ export default function SideChatBar() {
             toast.error('Error searching users');
         }
     };
+
     const extendedContacts = [...contacts, ...Array(50).fill().map((_, i) => ({
         ...contacts[i % contacts.length], // Дублирует существующий контакт
         chatId: `test-${i}`, // Генерирует уникальный `chatId` для каждого нового контакта
@@ -314,28 +303,38 @@ export default function SideChatBar() {
             <div className="search-container">
                 <input
                     type="text"
-                    placeholder="Search users..."
+                    placeholder="Search users by @name..."
                     value={searchQuery}
                     onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        searchUsers(e.target.value);
+                        const value = e.target.value;
+                        setSearchQuery(value);
+                        searchUsers(value);
                     }}
                     onFocus={() => setIsSearching(true)}
+                    onBlur={() => {
+                        // Delay hiding results to allow for clicking
+                        setTimeout(() => setIsSearching(false), 200);
+                    }}
                 />
-                {isSearching && filteredUsers.length > 0 && (
+                {isSearching && searchQuery && filteredUsers.length > 0 && (
                     <div className="search-results">
                         {filteredUsers.map((user) => (
                             <div
                                 key={user.id}
                                 className="search-result-item"
-                                onClick={() => handleUserSelect(user)}
+                                onClick={() => {
+                                    handleUserSelect(user);
+                                    setIsSearching(false);
+                                }}
                             >
                                 <img
                                     src={user.photoURL || 'default-avatar.png'}
-                                    alt={user.nickname}
+                                    alt={user.displayName}
                                     className="user-avatar"
                                 />
-                                <span>{user.nickname}</span>
+                                <div className="user-info">
+                                    <span>{user.displayName}</span>
+                                </div>
                             </div>
                         ))}
                     </div>

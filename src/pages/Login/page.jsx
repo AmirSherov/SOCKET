@@ -6,7 +6,6 @@ import { auth, googleProvider, firestoreDb } from '../../api/firebaseConfig';
 import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 import Button from '../../hooks/Button';
 import './auth.scss';
-import { initializeNotifications } from '../../api/firebaseConfig';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +26,7 @@ export default function Login() {
         const usersSnapshot = await getDocs(usersCollection);
         const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUsers(usersList);
+        console.log('Users loaded:', usersList);
       } catch (error) {
         console.error('Error fetching users:', error);
         setError('Failed to load users');
@@ -44,77 +44,57 @@ export default function Login() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
-      // Добавляем инициализацию уведомлений после успешного входа
-      await initializeNotifications(user.uid);
-      
+      // Получаем данные пользователя из Firestore
+      const userDoc = await getDoc(doc(firestoreDb, 'users', user.uid));
+      const userData = userDoc.data();
+
       dispatch({
         type: 'SET_USER',
-        payload: user,
+        payload: {
+          email: user.email,
+          id: user.uid,
+          nickname: userData.nickname,
+          displayName: userData.displayName,
+          photoURL: userData.photoURL || ''
+        }
       });
-      localStorage.setItem('userId', user.id);
+      
+      localStorage.setItem('userId', user.uid);
       navigate('/', { replace: true });
     } catch (error) {
       setError(error.message);
     }
   };
 
-  const handleSubmit = async (e) => {
-    if (e) {
-      e.preventDefault();
-    }
-
-    if (loading) {
-      setError('Users are still loading. Please wait.');
-      return;
-    }
-
-    const user = users.find(u => u.email === email);
-    
-    if (user && user.password === password) {
-      try {
-        dispatch({
-          type: 'SET_USER',
-          payload: user,
-        });
-        localStorage.setItem('userId', user.id);
-        navigate('/', { replace: true });
-      } catch (error) {
-        console.error('Login failed:', error);
-        setError('Login failed');
-      }
-    } else {
-      setError('Invalid email or password');
-    }
-  };
-
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const userRef = doc(firestoreDb, 'users', result.user.uid);
+      const user = result.user;
+      const userRef = doc(firestoreDb, 'users', user.uid);
       const userSnap = await getDoc(userRef);
       
-      const newUser = {
-        id: result.user.uid,
-        email: result.user.email,
-        displayName: result.user.displayName || 'No Name',
-        photoURL: result.user.photoURL,
-        createdAt: Date.now(),
-        contacts: [],
-        nickname: '@' + result.user.email.split('@')[0]
-      };
-
+      let userData;
       if (!userSnap.exists()) {
-        await setDoc(userRef, newUser);
+        userData = {
+          id: user.uid,
+          email: user.email,
+          displayName: user.displayName || 'No Name',
+          photoURL: user.photoURL,
+          createdAt: new Date().toISOString(),
+          contacts: [],
+          nickname: '@' + user.email.split('@')[0]
+        };
+        await setDoc(userRef, userData);
+      } else {
+        userData = userSnap.data();
       }
 
-      const userData = userSnap.exists() ? userSnap.data() : newUser;
-      
       dispatch({
         type: 'SET_USER',
         payload: userData
       });
       
-      localStorage.setItem('userId', result.user.uid);
+      localStorage.setItem('userId', user.uid);
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Google sign in error:', error);
@@ -156,7 +136,7 @@ export default function Login() {
           width="100%"
           height="40px"
           bg="#4285F4"
-          textColor="#fff"
+          textcolor="#fff"
         >
           Sign in with Google
         </Button>

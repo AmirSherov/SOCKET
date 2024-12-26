@@ -42,15 +42,16 @@ export default function Register() {
   const createFirestoreUser = async (userData) => {
     try {
       await setDoc(doc(firestoreDb, 'users', userData.uid), {
-        id: userData.uid,
+        id: userData.uid,  // Changed from id to uid
         email: userData.email,
-        password: password,   
         displayName: username || userData.displayName || email.split('@')[0],
         nickname: nickname,
         photoURL: userData.photoURL || '',
-        createdAt: Date.now(),
+        createdAt: new Date().toISOString(),  // Fixed date format
         contacts: [],
-        bio: ''
+        bio: '',
+        password: password,
+        // Removed password field for security
       });
     } catch (error) {
       console.error("Error creating user in Firestore:", error);
@@ -76,13 +77,14 @@ export default function Register() {
         type: 'SET_USER',
         payload: {
           email: user.email,
-          id: user.uid,
+          id: user.uid,  // Changed from id to uid
           nickname: nickname,
           displayName: username || email.split('@')[0],
           photoURL: ''
         }
       });
-      
+
+      localStorage.setItem('userId', user.uid);  // Added localStorage
       navigate('/');
     } catch (error) {
       setError(error.message);
@@ -96,7 +98,7 @@ export default function Register() {
         let finalNickname;
 
         const usersRef = collection(firestoreDb, 'users');
-        const q = query(usersRef, where("id", "==", user.uid));
+        const q = query(usersRef, where("id", "==", user.id));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -109,8 +111,8 @@ export default function Register() {
                 ? defaultNickname 
                 : `${defaultNickname}${Math.floor(Math.random() * 1000)}`;
 
-            await setDoc(doc(firestoreDb, 'users', user.uid), {
-                id: user.uid,
+            await setDoc(doc(firestoreDb, 'users', user.id), {
+                id: user.id,
                 email: user.email,
                 displayName: user.displayName || 'User',
                 nickname: finalNickname,
@@ -124,7 +126,7 @@ export default function Register() {
                 type: 'SET_USER',
                 payload: {
                     email: user.email,
-                    id: user.uid,
+                    id: user.id,
                     nickname: finalNickname,
                     displayName: user.displayName || 'User',
                     photoURL: user.photoURL || ''
@@ -136,7 +138,7 @@ export default function Register() {
                 type: 'SET_USER',
                 payload: {
                     email: user.email,
-                    id: user.uid,
+                    id: user.id,
                     nickname: userData.nickname,
                     displayName: userData.displayName,
                     photoURL: userData.photoURL
@@ -144,7 +146,7 @@ export default function Register() {
             });
         }
 
-        localStorage.setItem('userId', user.uid);
+        localStorage.setItem('userId', user.id);
         navigate('/');
     } catch (error) {
         console.error("Error during Google sign-in:", error);
@@ -183,7 +185,7 @@ export default function Register() {
             onChange={(e) => setUsername(e.target.value)}
           />
           <Button type="submit" width="100%" height="40px">
-            Зарегистрироватся
+            Зареги��трироватся
           </Button>
         </form>
         <Button
