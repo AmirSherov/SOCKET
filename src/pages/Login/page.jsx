@@ -26,7 +26,6 @@ export default function Login() {
         const usersSnapshot = await getDocs(usersCollection);
         const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUsers(usersList);
-        console.log('Users loaded:', usersList);
       } catch (error) {
         console.error('Error fetching users:', error);
         setError('Failed to load users');

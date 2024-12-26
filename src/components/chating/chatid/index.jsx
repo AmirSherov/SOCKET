@@ -60,6 +60,19 @@ export default function Chating() {
   };
 
   useEffect(() => {
+    window.history.pushState(null, null, window.location.href);
+
+    const handlePopState = () => {
+        navigate('/');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+        window.removeEventListener('popstate', handlePopState);
+    };
+}, [navigate]);
+  useEffect(() => {
     const loadChatData = async () => {
       setMessages([]);
       setLoading(true);
