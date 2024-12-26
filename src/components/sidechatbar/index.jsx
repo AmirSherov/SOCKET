@@ -6,6 +6,7 @@ import { firestoreDb } from '../../api/firebaseConfig';
 import { collection, query, where, doc, onSnapshot, getDocs, getDoc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import Loader from '../ui/Loader';
 import toast from 'react-hot-toast';
+import { executeMutation } from "firebase/data-connect";
 
 export default function SideChatBar() {
     const { state, dispatch } = useGlobalContext();
@@ -212,7 +213,12 @@ export default function SideChatBar() {
                     await setDoc(chatRef, {
                         participants: [currentUserId, selectedUser.id],
                         createdAt: serverTimestamp(),
-                        lastMessage: null
+                        lastMessage: {
+                            text: 'Начало диалога',
+                            timestamp: serverTimestamp(),
+                            senderId: currentUserId,
+                            unread: false
+                        }
                     });
                 }
 
@@ -321,38 +327,53 @@ export default function SideChatBar() {
             </div>
             <div className="side-chat-bar-header">
                 {contacts.length > 0 ? (
-                    // как сделать так что бы контакты увеличились на 50 для проверки скролла
-                    contacts.map(contact => (
-                        <div
-                            key={contact.chatId}
-                            className="contact-item"
-                            onClick={() => {
-                                selectChat(contact.chatId);
-                                dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.name });
-                                dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
-                            }}
-                        >
-                            <div className="contact-avatar">
-                                <img
-                                    src={contact.photoURL || 'default-avatar.png'}
-                                    alt={contact.name}
-                                />
-                            </div>
-                            <div onClick={() => selectChat(contact.chatId)} className="contact-info">
-                                <div className="contact-name">{contact.name}</div>
-                                <div className="contact-details">
-                                    <div className="contact-last-message">
-                                        {chatMessages[contact.chatId]?.senderId === user.id ? 'Вы: ' : ''} {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
-                                    </div>
-                                    {chatMessages[contact.chatId]?.timestamp && (
-                                        <div className="contact-time">
-                                            {new Date(chatMessages[contact.chatId].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    contacts
+                        .sort((a, b) => {
+                            const messageA = chatMessages[a.chatId];
+                            const messageB = chatMessages[b.chatId];
+                            const timeA = messageA?.timestamp || 0;
+                            const timeB = messageB?.timestamp || 0;
+                            return timeB - timeA;
+                        })
+                        .map(contact => (
+                            <div
+                                key={contact.chatId}
+                                className={`contact-item ${chatMessages[contact.chatId]?.unread && 
+                                    chatMessages[contact.chatId]?.senderId !== user.id ? 'unread' : ''}`}
+                                onClick={() => {
+                                    selectChat(contact.chatId);
+                                    dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.name });
+                                    dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
+                                    // Mark message as read when clicked
+                                    if (chatMessages[contact.chatId]?.unread) {
+                                        const chatRef = doc(firestoreDb, 'chats', contact.chatId);
+                                        updateDoc(chatRef, {
+                                            'lastMessage.unread': false
+                                        });
+                                    }
+                                }}
+                            >
+                                <div className="contact-avatar">
+                                    <img
+                                        src={contact.photoURL || 'default-avatar.png'}
+                                        alt={contact.name}
+                                    />
+                                </div>
+                                <div onClick={() => selectChat(contact.chatId)} className="contact-info">
+                                    <div className="contact-name">{contact.name}</div>
+                                    <div className="contact-details">
+                                        <div className="contact-last-message">
+                                            {chatMessages[contact.chatId]?.senderId === user.id ? 'Вы: ' : ''} {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
                                         </div>
-                                    )}
+                                        {chatMessages[contact.chatId]?.timestamp && (
+                                            <div className="contact-time">
+                                                {new Date(chatMessages[contact.chatId].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        ))
                 ) : (
                     <div className="no-contacts">
                         <span>No contacts yet</span>

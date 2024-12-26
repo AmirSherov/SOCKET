@@ -167,6 +167,29 @@
             p {
                 margin: 0;
             }
+
+            .message-info {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 4px;
+            }
+
+            .message-status {
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 1rem;
+                display: flex;
+                align-items: center;
+
+                svg {
+                    width: 16px;
+                    height: 16px;
+                }
+            }
+
+            &.sent .message-status {
+                color: #34b7f1; // Blue color for read messages
+            }
         }
     }
 

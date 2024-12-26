@@ -11,6 +11,8 @@
         top: 0;
         left: 0;
         overflow: hidden;
+        overflow-y: hidden;
+        overflow-x: hidden;
     }
     .burger-menu{
         position: absolute;
@@ -164,6 +166,27 @@
                 border-radius: 50%;
                 background-color: #00ff0d;
                 margin-right: 10px;
+            }
+
+            &.unread {
+                position: relative;
+                
+                &::after {
+                    content: '';
+                    position: absolute;
+                    right: 15px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 10px;
+                    height: 10px;
+                    background-color: #4C9EEB;
+                    border-radius: 50%;
+                }
+        
+                .contact-last-message {
+                    font-weight: bold;
+                    color: #fff;
+                }
             }
         }
     }

@@ -7,11 +7,12 @@ import { IoSend } from "react-icons/io5";
 import { init } from "filestack-js";
 import ChatingHeader from "../chatingheader";
 import { realtimeDb, firestoreDb } from '../../../api/firebaseConfig';
-import { ref, push, onChildAdded, remove, off, onChildRemoved } from 'firebase/database';
+import { ref, push, onChildAdded, remove, off, onChildRemoved, update } from 'firebase/database'; // добавляем update
 import { doc, getDoc, updateDoc, arrayUnion, collection, getDocs, setDoc } from 'firebase/firestore';
 import Loader from '../../ui/Loader';
 import toast from 'react-hot-toast';
 import { MdOutlineFileDownload } from "react-icons/md";
+import { BsCheck, BsCheckAll } from "react-icons/bs";
 const client = init("A9SyIIcLaSvaAOwQJBrC4z");
 
 const formatTimestamp = (timestamp) => {
@@ -159,7 +160,9 @@ export default function Chating() {
       text: currentMessage,
       file: currentFile,
       timestamp: Date.now(),
-      senderId: userId
+      senderId: userId,
+      status: 'delivered', // Add initial status
+      unread: true  // Добавляем флаг непрочитанного сообщения
     };
 
     try {
@@ -181,7 +184,8 @@ export default function Chating() {
         lastMessage: {
           text: currentMessage,
           timestamp: Date.now(),
-          senderId: userId
+          senderId: userId,
+          unread: true  // Добавляем флаг непрочитанного
         }
       });
 
@@ -192,6 +196,23 @@ export default function Chating() {
       setMessage(currentMessage);
       setSelectedFile(currentFile);
       setFileName(fileName);
+    }
+  };
+
+  // Add new function to mark messages as read
+  const markMessagesAsRead = async () => {
+    const unreadMessages = messages.filter(msg => 
+      msg.senderId !== userId && msg.status !== 'read'
+    );
+  
+    for (const msg of unreadMessages) {
+      const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${msg.firebaseKey}`);
+      try {
+        // Используем update вместо updateDoc
+        await update(messageRef, { status: 'read' });
+      } catch (error) {
+        console.error('Error marking message as read:', error);
+      }
     }
   };
 
@@ -294,6 +315,52 @@ export default function Chating() {
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
+  // Добавляем эффект для отслеживания прочтения сообщений
+  useEffect(() => {
+    if (!chatidSelected || loading) return;
+
+    // Отмечаем сообщения как прочитанные когда пользователь открывает чат
+    const markMessagesAsRead = async () => {
+      const unreadMessages = messages.filter(msg => 
+        msg.senderId !== userId && // Сообщения не от текущего пользователя
+        msg.status !== 'read' // Непрочитанные сообщения
+      );
+
+      for (const msg of unreadMessages) {
+        const messageRef = ref(realtimeDb, `chats/${chatidSelected}/messages/${msg.firebaseKey}`);
+        await update(messageRef, { status: 'read' });
+      }
+
+      // Обновляем lastMessage в Firestore
+      const chatRef = doc(firestoreDb, 'chats', chatidSelected);
+      const chatDoc = await getDoc(chatRef);
+      
+      if (chatDoc.exists()) {
+        const chatData = chatDoc.data();
+        if (chatData.lastMessage?.unread && chatData.lastMessage?.senderId !== userId) {
+          await updateDoc(chatRef, {
+            'lastMessage.unread': false
+          });
+        }
+      }
+    };
+
+    // Проверяем видимость страницы
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        markMessagesAsRead();
+      }
+    };
+
+    // Вызываем при монтировании и при изменении видимости
+    markMessagesAsRead();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [chatidSelected, messages, userId, loading]);
+
   if (!chatidSelected) {
     return (
       <div className="chating-container">
@@ -340,7 +407,14 @@ export default function Chating() {
                 </div>
               )}
             </div>
-            <div className="message-timestamp">{formatTimestamp(msg.timestamp)}</div>
+            <div className="message-info">
+              <span className="message-timestamp">{formatTimestamp(msg.timestamp)}</span>
+              {msg.senderId === userId && (
+                <span className="message-status">
+                  {msg.status === 'read' ? <BsCheckAll /> : <BsCheck />}
+                </span>
+              )}
+            </div>
           </div>
         ))}
         <div ref={messagesEndRef} />
