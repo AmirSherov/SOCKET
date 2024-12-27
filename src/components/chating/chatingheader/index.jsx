@@ -14,12 +14,14 @@ import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase
 import { ref, remove } from 'firebase/database';
 import { firestoreDb, realtimeDb } from '../../../api/firebaseConfig';
 import toast from 'react-hot-toast';
+import UserProfile from '../../UserProfile';
 
 function ChatingHeader() {
     const { state, dispatch } = useGlobalContext();
     const navigate = useNavigate();
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
 
     useEffect(() => {
         const handleResize = () => {
@@ -116,8 +118,15 @@ function ChatingHeader() {
         }
     };
 
+    const handleProfileClick = (e) => {
+        e.stopPropagation();
+        setIsSettingsOpen(false);
+        setIsProfileOpen(true);
+    };
+
     return (
-        <div className="chating-header">
+        <>
+            <div className="chating-header">
                 <div>
                     {!state.sidebarClose ? (
                         <SlArrowLeft
@@ -151,59 +160,70 @@ function ChatingHeader() {
                         />
                     )}
                 </div>
-            <div className="chating-user-info">
-                <div className="chating-user-logo">
-                    <img
-                        width={40}
-                        height={40}
-                        src={state.selectedUserPhoto || 'default-avatar.png'}
-                        alt={state.selectedUserName || 'User'}
+                <div className="chating-user-info">
+                    <div className="chating-user-logo">
+                        <img
+                            width={40}
+                            height={40}
+                            src={state.selectedUserPhoto || 'default-avatar.png'}
+                            alt={state.selectedUserName || 'User'}
+                        />
+                    </div>
+                    <div className="chating-user-name">
+                        <h1>{state.selectedUserName || 'Select a chat'}</h1>
+                    </div>
+                </div>
+                <div className="chating-user-setting">
+                    <IoSettings
+                        className="chating-user-settings"
+                        onClick={handleSettingsClick}
+                        style={{ color: "white", width: "48px", height: "48px", fontSize: "1.5rem", padding: "10px", cursor: "pointer" }}
                     />
-                </div>
-                <div className="chating-user-name">
-                    <h1>{state.selectedUserName || 'Select a chat'}</h1>
-                </div>
-            </div>
-            <div className="chating-user-setting">
-                <IoSettings
-                    className="chating-user-settings"
-                    onClick={handleSettingsClick}
-                    style={{ color: "white", width: "48px", height: "48px", fontSize: "1.5rem", padding: "10px", cursor: "pointer" }}
-                />
-                <div className={`chating-setting ${isSettingsOpen ? 'active' : ''}`}>
-                    <div>
-                        <span>Profile</span>
-                        <span>
-                            <VscAccount />
-                        </span>
-                    </div>
-                    <div>
-                        <span>Mute</span>
-                        <span>
-                            <AiOutlineSound />
-                        </span>
-                    </div>
-                    <div>
-                        <span>Block User</span>
-                        <span>
-                            <MdBlock />
-                        </span>
-                    </div>
-                    <div>
-                        <span>Report</span>
-                        <span>
-                            <MdReport />
-                        </span>
-                    </div>
-                    <div onClick={handleDeleteChat} role="button" tabIndex={0}>
-                        <span>Delete Chat</span>
-                        <span>
-                            <MdDelete />
-                        </span>
+                    <div className={`chating-setting ${isSettingsOpen ? 'active' : ''}`}>
+                        <div onClick={handleProfileClick}>
+                            <span>Profile</span>
+                            <span>
+                                <VscAccount />
+                            </span>
+                        </div>
+                        <div>
+                            <span>Mute</span>
+                            <span>
+                                <AiOutlineSound />
+                            </span>
+                        </div>
+                        <div>
+                            <span>Block User</span>
+                            <span>
+                                <MdBlock />
+                            </span>
+                        </div>
+                        <div>
+                            <span>Report</span>
+                            <span>
+                                <MdReport />
+                            </span>
+                        </div>
+                        <div onClick={handleDeleteChat} role="button" tabIndex={0}>
+                            <span>Delete Chat</span>
+                            <span>
+                                <MdDelete />
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            <UserProfile
+                isOpen={isProfileOpen}
+                onClose={() => setIsProfileOpen(false)}
+                userData={{
+                    name: state.selectedUserName,
+                    photo: state.selectedUserPhoto,
+                    nickname: state.selectedUserName, // или другой никнейм если есть
+                    bio: state.selectedUserBio // Add this line
+                }}
+            />
+        </>
     )
 }
 export default ChatingHeader

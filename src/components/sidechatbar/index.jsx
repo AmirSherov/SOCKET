@@ -81,14 +81,15 @@ export default function SideChatBar() {
 
                 if (actualUserData && (
                     contact.name !== actualUserData.displayName ||
-                    contact.photoURL !== actualUserData.photoURL
+                    contact.photoURL !== actualUserData.photoURL ||
+                    contact.bio !== actualUserData.bio  // Добавляем проверку bio
                 )) {
                     const updatedContact = {
                         ...contact,
                         name: actualUserData.displayName,
-                        photoURL: actualUserData.photoURL
+                        photoURL: actualUserData.photoURL,
+                        bio: actualUserData.bio  // Добавляем bio
                     };
-
                     updates.push(updatedContact);
                 }
             });
@@ -156,7 +157,7 @@ export default function SideChatBar() {
                 if (userData && userData.id !== currentUserId) {
                     const searchValue = searchTerm.substring(1).toLowerCase(); // Remove '@' for search
                     const displayNameMatch = userData.displayName?.toLowerCase().includes(searchValue);
-                    
+
                     if (displayNameMatch) {
                         users.push({
                             id: userData.id,
@@ -223,16 +224,15 @@ export default function SideChatBar() {
                 // Подготавливаем данные контактов
                 const contactData = {
                     chatId: chatId,
-                    name: selectedUser.displayName,  // Use displayName here
-                    photoURL: selectedUser.photoURL
+                    bio: selectedUserData.bio  // Добавляем bio из данных пользователя
                 };
 
                 const otherContactData = {
                     chatId: chatId,
                     name: user.displayName,
-                    photoURL: user.photoURL
-                };
-
+                    photoURL: user.photoURL,
+                    bio: currentUserData.bio  // Добавляем bio текущего пользователя
+                }
                 // Обновляем контакты только если их нет
                 const updatePromises = [];
 
@@ -252,7 +252,7 @@ export default function SideChatBar() {
                     );
                 }
 
-                await Promise.all(updatePromises);
+                await Promise.all(updatePromises)
             }
 
             dispatch({ type: "SET_SELECTED_CHAT", payload: chatId });
@@ -275,12 +275,31 @@ export default function SideChatBar() {
     }
 
     // В функции selectChat добавляем обновление статуса сообщения
-    const selectChat = (chatId) => {
+    const selectChat = async (chatId) => {
         if (windowWidth < 600) {
             navigate(`/chating/${chatId}`);
             dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
         } else {
             dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
+        }
+
+        // Find the other user's ID
+        const [user1, user2] = chatId.split('-');
+        const otherUserId = user1 === currentUserId ? user2 : user1;
+
+        // Fetch the other user's data to get their bio
+        try {
+            const usersRef = collection(firestoreDb, 'users');
+            const q = query(usersRef, where("id", "==", otherUserId));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const userData = querySnapshot.docs[0].data();
+                dispatch({ type: 'SET_SELECTED_USER_BIO', payload: userData.bio || 'No bio available' });
+            }
+        } catch (error) {
+            console.error("Error fetching user bio:", error);
+            dispatch({ type: 'SET_SELECTED_USER_BIO', payload: 'No bio available' });
         }
 
         const chatRef = doc(firestoreDb, 'chats', chatId);
@@ -353,16 +372,17 @@ export default function SideChatBar() {
                         .map(contact => (
                             <div
                                 key={contact.chatId}
-                                className={`contact-item ${
-                                    chatMessages[contact.chatId]?.senderId !== user.id && 
-                                    (chatMessages[contact.chatId]?.unread || chatMessages[contact.chatId]?.status !== 'read') 
-                                        ? 'unread' 
-                                        : ''
-                                }`}
+                                className={`contact-item ${chatMessages[contact.chatId]?.senderId !== user.id &&
+                                    (chatMessages[contact.chatId]?.unread || chatMessages[contact.chatId]?.status !== 'read')
+                                    ? 'unread'
+                                    : ''
+                                    }`}
                                 onClick={() => {
                                     selectChat(contact.chatId);
                                     dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.name });
                                     dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
+                                    dispatch({ type: 'SET_SELECTED_USER_BIO', payload: contact.bio }); // Make sure bio is dispatched
+                                    console.log(contact.bio);
                                     // Mark message as read when clicked
                                     if (chatMessages[contact.chatId]?.unread) {
                                         const chatRef = doc(firestoreDb, 'chats', contact.chatId);
