@@ -181,11 +181,12 @@ export default function SideChatBar() {
         name: `Test User ${i + 1}`, // Генерирует уникальное имя
         photoURL: 'default-avatar.png' // Устанавливает аватар по умолчанию
     }))];
+
     const handleUserSelect = async (selectedUser) => {
         const chatId = [currentUserId, selectedUser.id].sort().join('-');
 
         try {
-            // Найдем документы обоих пользователей
+            // Get both users' documents
             const usersRef = collection(firestoreDb, 'users');
             const [currentUserDocs, selectedUserDocs] = await Promise.all([
                 getDocs(query(usersRef, where("id", "==", currentUserId))),
@@ -198,13 +199,13 @@ export default function SideChatBar() {
             const currentUserData = currentUserDoc.data();
             const selectedUserData = selectedUserDoc.data();
 
-            // Проверяем существование чата в контактах
+            // Check if chat exists in contacts
             const currentUserHasChat = currentUserData.contacts?.some(contact => contact.chatId === chatId) || false;
             const selectedUserHasChat = selectedUserData.contacts?.some(contact => contact.chatId === chatId) || false;
 
-            // Если чат не существует хотя бы у одного из пользователей
+            // If chat doesn't exist for at least one user
             if (!currentUserHasChat || !selectedUserHasChat) {
-                // Создаем чат если его нет
+                // Create chat if it doesn't exist
                 const chatRef = doc(firestoreDb, 'chats', chatId);
                 const chatDoc = await getDoc(chatRef);
 
@@ -221,47 +222,53 @@ export default function SideChatBar() {
                     });
                 }
 
-                // Подготавливаем данные контактов
-                const contactData = {
+                // Prepare contact data for both users
+                const currentUserContactData = {
                     chatId: chatId,
-                    bio: selectedUserData.bio  // Добавляем bio из данных пользователя
+                    name: selectedUserData.displayName,
+                    photoURL: selectedUserData.photoURL,
+                    bio: selectedUserData.bio || ''
                 };
 
-                const otherContactData = {
+                const selectedUserContactData = {
                     chatId: chatId,
-                    name: user.displayName,
-                    photoURL: user.photoURL,
-                    bio: currentUserData.bio  // Добавляем bio текущего пользователя
-                }
-                // Обновляем контакты только если их нет
+                    name: currentUserData.displayName,
+                    photoURL: currentUserData.photoURL,
+                    bio: currentUserData.bio || ''
+                };
+
+                // Update contacts only if needed
                 const updatePromises = [];
 
                 if (!currentUserHasChat) {
                     updatePromises.push(
-                        updateDoc(doc(firestoreDb, 'users', currentUserDoc.id), {
-                            contacts: arrayUnion(contactData)
+                        updateDoc(currentUserDoc.ref, {
+                            contacts: arrayUnion(currentUserContactData)
                         })
                     );
                 }
 
                 if (!selectedUserHasChat) {
                     updatePromises.push(
-                        updateDoc(doc(firestoreDb, 'users', selectedUserDoc.id), {
-                            contacts: arrayUnion(otherContactData)
+                        updateDoc(selectedUserDoc.ref, {
+                            contacts: arrayUnion(selectedUserContactData)
                         })
                     );
                 }
 
-                await Promise.all(updatePromises)
+                await Promise.all(updatePromises);
             }
 
+            // Update the UI state
             dispatch({ type: "SET_SELECTED_CHAT", payload: chatId });
             dispatch({ type: "SET_SELECTED_USER_NAME", payload: selectedUser.displayName });
             dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: selectedUser.photoURL });
             setSearchQuery('');
             setFilteredUsers([]);
             toast.success('Chat created successfully');
+
         } catch (error) {
+            console.error("Error creating chat:", error);
             toast.error('Error creating chat');
         }
     };
