@@ -212,7 +212,7 @@ export default function Chating() {
             }
         });
 
-        // Add users to each other's contacts if this is their first interaction
+        // Add users to each other's contacts only on first message
         const [user1, user2] = chatidSelected.split('-');
         const otherUserId = user1 === userId ? user2 : user1;
 
@@ -235,6 +235,7 @@ export default function Chating() {
             await updateDoc(currentUserDoc.docs[0].ref, {
                 contacts: arrayUnion({
                     chatId: chatidSelected,
+                    userId: otherUserId,
                     name: state.selectedUserName,
                     photoURL: state.selectedUserPhoto,
                     bio: state.selectedUserBio || ''
@@ -247,6 +248,7 @@ export default function Chating() {
             await updateDoc(otherUserDoc.docs[0].ref, {
                 contacts: arrayUnion({
                     chatId: chatidSelected,
+                    userId: userId,
                     name: state.user.displayName,
                     photoURL: state.user.photoURL,
                     bio: state.user.bio || ''

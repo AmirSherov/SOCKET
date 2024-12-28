@@ -10,7 +10,8 @@ const initialState = {
     isBurgerOpen: false,
     selectedUserBio: null,
     selectedUserId: null,
-    activeTab: 'chats' // Add this new property
+    activeTab: 'chats',
+    selectedUserStatus: null,
 }
 function globalReducer(state, action) {
     switch (action.type) {
@@ -38,6 +39,8 @@ function globalReducer(state, action) {
             return { ...state, activeTab: action.payload };
         case "SET_SELECTED_USER_ID":
             return { ...state, selectedUserId: action.payload };
+        case "SET_SELECTED_USER_STATUS":
+            return { ...state, selectedUserStatus: action.payload };
         default:
             throw new Error(`Unhandled action type: ${action.type}`);
     }

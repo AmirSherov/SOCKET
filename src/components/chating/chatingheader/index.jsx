@@ -244,6 +244,7 @@ function ChatingHeader() {
                     </div>
                     <div className="chating-user-name">
                         <h1>{state.selectedUserName || 'Select a chat'}</h1>
+                        <h3 style={{ color: state.selectedUserStatus ? 'green' : 'gray', fontSize: '0.8rem' }}>{state.selectedUserStatus ? 'Online' : 'Offline'}</h3>
                     </div>
                 </div>
                 <div className="chating-user-setting">

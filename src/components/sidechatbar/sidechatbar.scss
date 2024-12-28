@@ -188,6 +188,24 @@
                     color: #fff;
                 }
             }
+
+            &.online::before {
+                content: '';
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: #4CAF50; // Green for online
+                margin-right: 10px;
+            }
+
+            &.offline::before {
+                content: '';
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background-color: #ff0000; // Grey for offline
+                margin-right: 10px;
+            }
         }
     }
 }

@@ -16,9 +16,12 @@ export default function SideChatBar() {
     const [searchQuery, setSearchQuery] = useState('');
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [userStatuses, setUserStatuses] = useState({});
     const navigate = useNavigate();
     const user = state.user;
     const currentUserId = state.user?.id || localStorage.getItem('userId');
+
+    // Group all useEffect hooks together at the top
     useEffect(() => {
         const handleResize = () => {
             setWindowWidth(window.innerWidth);
@@ -27,7 +30,9 @@ export default function SideChatBar() {
         return () => {
             window.removeEventListener('resize', handleResize);
         };
-    })
+    }, []);
+
+    // Main user data effect
     useEffect(() => {
         if (!user?.id) {
             setLoading(false);
@@ -50,66 +55,61 @@ export default function SideChatBar() {
         return () => unsubscribeContacts();
     }, [user?.id]);
 
-    // Добавляем новый useEffect для отслеживания изменений данных пользователей
+    // Contacts effect
     useEffect(() => {
-        if (contacts.length === 0) return;
+        if (contacts.length === 0 || !state.user?.id) return;
 
-        // Получаем ID всех пользователей из контактов
-        const contactUserIds = contacts.map(contact => {
-            const [user1, user2] = contact.chatId.split('-');
-            return currentUserId === user1 ? user2 : user1;
-        });
-
-        // Создаем подписку на данные пользователей
         const usersRef = collection(firestoreDb, 'users');
+        
+        // Get valid user IDs from contacts
+        const contactUserIds = contacts
+            .map(contact => contact.userId)
+            .filter(id => id); // Remove any undefined or null values
+
+        // Only proceed if we have valid IDs
+        if (contactUserIds.length === 0) return;
+
+        // Create query for users with valid IDs
         const q = query(usersRef, where("id", "in", contactUserIds));
-
+        
         const unsubscribeUsers = onSnapshot(q, async (snapshot) => {
-            const updates = [];
-            const userDocs = {};
+            let hasUpdates = false;
+            const updatedContacts = contacts.map(contact => {
+                if (!contact.userId) return contact; // Skip if no userId
 
-            // Создаем map пользователей для быстрого доступа
-            snapshot.docs.forEach(doc => {
-                userDocs[doc.data().id] = doc.data();
-            });
-
-            // Проверяем каждый контакт
-            contacts.forEach(contact => {
-                const [user1, user2] = contact.chatId.split('-');
-                const contactUserId = currentUserId === user1 ? user2 : user1;
-                const actualUserData = userDocs[contactUserId];
-
-                if (actualUserData && (
-                    contact.name !== actualUserData.displayName ||
-                    contact.photoURL !== actualUserData.photoURL ||
-                    contact.bio !== actualUserData.bio  // Добавляем проверку bio
-                )) {
-                    const updatedContact = {
-                        ...contact,
-                        name: actualUserData.displayName,
-                        photoURL: actualUserData.photoURL,
-                        bio: actualUserData.bio  // Добавляем bio
-                    };
-                    updates.push(updatedContact);
+                const actualUserDoc = snapshot.docs.find(doc => doc.data().id === contact.userId);
+                
+                if (actualUserDoc) {
+                    const userData = actualUserDoc.data();
+                    if (
+                        contact.name !== userData.displayName ||
+                        contact.photoURL !== userData.photoURL ||
+                        contact.bio !== userData.bio
+                    ) {
+                        hasUpdates = true;
+                        return {
+                            ...contact,
+                            name: userData.displayName,
+                            photoURL: userData.photoURL,
+                            bio: userData.bio
+                        };
+                    }
                 }
+                return contact;
             });
 
-            // Если есть обновления, применяем их
-            if (updates.length > 0) {
+            // Only update if we have changes
+            if (hasUpdates) {
                 try {
-                    const currentUserQuery = query(usersRef, where("id", "==", currentUserId));
-                    const currentUserDocs = await getDocs(currentUserQuery);
+                    const userQuery = query(usersRef, where("id", "==", state.user.id));
+                    const userSnapshot = await getDocs(userQuery);
 
-                    if (!currentUserDocs.empty) {
-                        const currentUserDoc = currentUserDocs.docs[0];
-                        const updatedContacts = contacts.map(contact => {
-                            const update = updates.find(u => u.chatId === contact.chatId);
-                            return update || contact;
-                        });
-
-                        await updateDoc(currentUserDoc.ref, {
+                    if (!userSnapshot.empty) {
+                        const userDoc = userSnapshot.docs[0];
+                        await updateDoc(userDoc.ref, {
                             contacts: updatedContacts
                         });
+                        setContacts(updatedContacts);
                     }
                 } catch (error) {
                     console.error("Error updating contacts:", error);
@@ -118,8 +118,34 @@ export default function SideChatBar() {
         });
 
         return () => unsubscribeUsers();
+    }, [contacts, state.user?.id, currentUserId]);
+
+    // Status tracking effect
+    useEffect(() => {
+        if (contacts.length === 0) return;
+
+        const contactUserIds = contacts.map(contact => {
+            const [user1, user2] = contact.chatId.split('-');
+            return currentUserId === user1 ? user2 : user1;
+        });
+
+        const usersRef = collection(firestoreDb, 'users');
+        const q = query(usersRef, where("id", "in", contactUserIds));
+
+        // Subscribe to real-time status updates
+        const unsubscribeStatuses = onSnapshot(q, (snapshot) => {
+            const statuses = {};
+            snapshot.docs.forEach(doc => {
+                const userData = doc.data();
+                statuses[userData.id] = userData.status || false;
+            });
+            setUserStatuses(statuses);
+        });
+
+        return () => unsubscribeStatuses();
     }, [contacts, currentUserId]);
 
+    // Messages effect
     useEffect(() => {
         const unsubscribers = contacts.map(contact => {
             if (!contact.chatId) return null;
@@ -140,6 +166,24 @@ export default function SideChatBar() {
             unsubscribers.forEach(unsub => unsub && unsub());
         };
     }, [contacts]);
+
+    // Selected user status effect - moved from bottom to top
+    useEffect(() => {
+        if (!state.selectedUserId) return;
+
+        const userRef = doc(firestoreDb, 'users', state.selectedUserId);
+        const unsubscribe = onSnapshot(userRef, (doc) => {
+            if (doc.exists()) {
+                const userData = doc.data();
+                dispatch({ 
+                    type: 'SET_SELECTED_USER_STATUS', 
+                    payload: userData.status || false 
+                });
+            }
+        });
+
+        return () => unsubscribe();
+    }, [state.selectedUserId, dispatch]);
 
     const searchUsers = async (searchTerm) => {
         if (!searchTerm.trim() || !searchTerm.startsWith('@') || searchTerm.length <= 1) {
@@ -186,16 +230,6 @@ export default function SideChatBar() {
         const chatId = [currentUserId, selectedUser.id].sort().join('-');
 
         try {
-            // Get both users' documents
-            const usersRef = collection(firestoreDb, 'users');
-            const [currentUserDocs, selectedUserDocs] = await Promise.all([
-                getDocs(query(usersRef, where("id", "==", currentUserId))),
-                getDocs(query(usersRef, where("id", "==", selectedUser.id)))
-            ]);
-
-            const currentUserDoc = currentUserDocs.docs[0];
-            const selectedUserDoc = selectedUserDocs.docs[0];
-
             // Initialize chat if it doesn't exist
             const chatRef = doc(firestoreDb, 'chats', chatId);
             const chatDoc = await getDoc(chatRef);
@@ -208,12 +242,12 @@ export default function SideChatBar() {
                 });
             }
 
-            // Update the UI state
+            // Update the UI state only
             dispatch({ type: "SET_SELECTED_CHAT", payload: chatId });
             dispatch({ type: "SET_SELECTED_USER_NAME", payload: selectedUser.displayName });
             dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: selectedUser.photoURL });
+            dispatch({ type: 'SET_SELECTED_USER_STATUS', payload: selectedUser.status });
             
-            // Add navigation for mobile devices
             if (windowWidth < 600) {
                 navigate(`/chating/${chatId}`);
             }
@@ -268,12 +302,14 @@ export default function SideChatBar() {
                 dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.displayName });
                 dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
                 dispatch({ type: 'SET_SELECTED_USER_BIO', payload: contact.bio });
+                dispatch({ type: 'SET_SELECTED_USER_STATUS', payload: contact.status });
             } else {
                 dispatch({ type: 'SET_CURRENT_CHAT', payload: currentChat });
                 dispatch({ type: 'SET_SELECTED_CHAT', payload: currentChat.id });
                 dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.displayName });
                 dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
                 dispatch({ type: 'SET_SELECTED_USER_BIO', payload: contact.bio });
+                dispatch({ type: 'SET_SELECTED_USER_STATUS', payload: contact.status });
             }
             dispatch({ type: 'SET_ACTIVE_TAB', payload: 'chats' });
 
@@ -308,12 +344,13 @@ export default function SideChatBar() {
                     navigate(`/chating/${chatId}`);
                 }
 
-                // Update all necessary user information
+                // Update all necessary user information including real-time status
                 dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
-                dispatch({ type: 'SET_SELECTED_USER_ID', payload: otherUserId }); // Add this line
+                dispatch({ type: 'SET_SELECTED_USER_ID', payload: otherUserId });
                 dispatch({ type: 'SET_SELECTED_USER_NAME', payload: userData.displayName });
                 dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: userData.photoURL });
                 dispatch({ type: 'SET_SELECTED_USER_BIO', payload: userData.bio });
+                dispatch({ type: 'SET_SELECTED_USER_STATUS', payload: userStatuses[otherUserId] || false });
             }
         } catch (error) {
             console.error("Error selecting chat:", error);
@@ -387,50 +424,58 @@ export default function SideChatBar() {
                             const timeB = messageB?.timestamp || 0;
                             return timeB - timeA;
                         })
-                        .map(contact => (
-                            <div
-                                key={contact.chatId}
-                                className={`contact-item ${chatMessages[contact.chatId]?.senderId !== user.id &&
-                                    (chatMessages[contact.chatId]?.unread || chatMessages[contact.chatId]?.status !== 'read')
-                                    ? 'unread'
-                                    : ''
-                                    }`}
-                                onClick={() => {
-                                    selectChat(contact.chatId);
-                                    dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.name });
-                                    dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
-                                    dispatch({ type: 'SET_SELECTED_USER_BIO', payload: contact.bio }); // Make sure bio is dispatched
-                                    console.log(contact.bio);
-                                    // Mark message as read when clicked
-                                    if (chatMessages[contact.chatId]?.unread) {
-                                        const chatRef = doc(firestoreDb, 'chats', contact.chatId);
-                                        updateDoc(chatRef, {
-                                            'lastMessage.unread': false
-                                        });
-                                    }
-                                }}
-                            >
-                                <div className="contact-avatar">
-                                    <img
-                                        src={contact.photoURL || 'default-avatar.png'}
-                                        alt={contact.name}
-                                    />
-                                </div>
-                                <div onClick={() => selectChat(contact.chatId)} className="contact-info">
-                                    <div className="contact-name">{contact.name}</div>
-                                    <div className="contact-details">
-                                        <div className="contact-last-message">
-                                            {chatMessages[contact.chatId]?.senderId === user.id ? 'Вы: ' : ''} {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
-                                        </div>
-                                        {chatMessages[contact.chatId]?.timestamp && (
-                                            <div className="contact-time">
-                                                {new Date(chatMessages[contact.chatId].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        .map(contact => {
+                            // Get other user's ID and status
+                            const [user1, user2] = contact.chatId.split('-');
+                            const otherUserId = currentUserId === user1 ? user2 : user1;
+                            const isOnline = userStatuses[otherUserId] || false;
+
+                            return (
+                                <div
+                                    key={contact.chatId}
+                                    className={`contact-item ${
+                                        chatMessages[contact.chatId]?.senderId !== user.id &&
+                                        chatMessages[contact.chatId]?.unread
+                                            ? 'unread'
+                                            : ''
+                                    } ${isOnline ? 'online' : 'offline'}`}
+                                    onClick={() => {
+                                        selectChat(contact.chatId);
+                                        dispatch({ type: 'SET_SELECTED_USER_NAME', payload: contact.name });
+                                        dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
+                                        dispatch({ type: 'SET_SELECTED_USER_BIO', payload: contact.bio }); // Make sure bio is dispatched
+                                        console.log(contact.bio);
+                                        // Mark message as read when clicked
+                                        if (chatMessages[contact.chatId]?.unread) {
+                                            const chatRef = doc(firestoreDb, 'chats', contact.chatId);
+                                            updateDoc(chatRef, {
+                                                'lastMessage.unread': false
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <div className="contact-avatar">
+                                        <img
+                                            src={contact.photoURL || 'default-avatar.png'}
+                                            alt={contact.name}
+                                        />
+                                    </div>
+                                    <div onClick={() => selectChat(contact.chatId)} className="contact-info">
+                                        <div className="contact-name">{contact.name}</div>
+                                        <div className="contact-details">
+                                            <div className="contact-last-message">
+                                                {chatMessages[contact.chatId]?.senderId === user.id ? 'Вы: ' : ''} {chatMessages[contact.chatId]?.text || 'Нет сообщений'}
                                             </div>
-                                        )}
+                                            {chatMessages[contact.chatId]?.timestamp && (
+                                                <div className="contact-time">
+                                                    {new Date(chatMessages[contact.chatId].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                 ) : (
                     <div className="no-contacts">
                         <span>No contacts chats</span>

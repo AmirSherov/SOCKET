@@ -8,12 +8,16 @@ import Chating from "../../components/chating/chatid";
 import Sidechatbar from "../../components/sidechatbar";
 import Loader from "../../components/ui/Loader";
 import SideContactBar from "../../components/sidecontactbar/index"
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import "./mainpage.scss";
 
 export default function MainPage() {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { state, dispatch } = useGlobalContext();
+    
+    // Add online status tracking
+    useOnlineStatus(state.user?.id);
 
     useEffect(() => {
         const checkAuth = async () => {

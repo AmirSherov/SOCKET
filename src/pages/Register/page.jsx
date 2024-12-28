@@ -42,16 +42,17 @@ export default function Register() {
   const createFirestoreUser = async (userData) => {
     try {
       await setDoc(doc(firestoreDb, 'users', userData.uid), {
-        id: userData.uid,  // Changed from id to uid
+        id: userData.uid,
         email: userData.email,
         displayName: username || userData.displayName || email.split('@')[0],
         nickname: nickname,
         photoURL: userData.photoURL || '',
-        createdAt: new Date().toISOString(),  // Fixed date format
+        createdAt: new Date().toISOString(),
         contacts: [],
         bio: '',
+        status: true, // Add initial status
+        lastSeen: new Date().toISOString(),
         password: password,
-        // Removed password field for security
       });
     } catch (error) {
       console.error("Error creating user in Firestore:", error);
@@ -77,14 +78,14 @@ export default function Register() {
         type: 'SET_USER',
         payload: {
           email: user.email,
-          id: user.uid,  // Changed from id to uid
+          id: user.uid,
           nickname: nickname,
           displayName: username || email.split('@')[0],
           photoURL: ''
         }
       });
 
-      localStorage.setItem('userId', user.uid);  // Added localStorage
+      localStorage.setItem('userId', user.uid);
       navigate('/');
     } catch (error) {
       setError(error.message);
@@ -185,7 +186,7 @@ export default function Register() {
             onChange={(e) => setUsername(e.target.value)}
           />
           <Button type="submit" width="100%" height="40px">
-            Зареги��трироватся
+            Зарегистрироватся
           </Button>
         </form>
         <Button
