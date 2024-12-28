@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './accountSettings.scss';
 import { auth, firestoreDb } from '../../api/firebaseConfig';
 import { signOut } from 'firebase/auth';

@@ -2,13 +2,15 @@ import React, { createContext, useReducer, useContext } from 'react';
 const initialState = {
     sidebarClose: false,
     user: null,
-    selectedChat: null,
+    selectedChat: null,  // ID текущего выбранного чата
     photoUrl: null,
     selectedUserName: null,
     selectedUserPhoto: null,
-    currentChat: null,
+    currentChat: null,   // Полные данные текущего чата
     isBurgerOpen: false,
-    selectedUserBio: null
+    selectedUserBio: null,
+    selectedUserId: null,
+    activeTab: 'chats' // Add this new property
 }
 function globalReducer(state, action) {
     switch (action.type) {
@@ -32,6 +34,10 @@ function globalReducer(state, action) {
             return { ...state, isBurgerOpen: action.payload };
         case 'SET_SELECTED_USER_BIO':
             return { ...state, selectedUserBio: action.payload };
+        case 'SET_ACTIVE_TAB':
+            return { ...state, activeTab: action.payload };
+        case "SET_SELECTED_USER_ID":
+            return { ...state, selectedUserId: action.payload };
         default:
             throw new Error(`Unhandled action type: ${action.type}`);
     }

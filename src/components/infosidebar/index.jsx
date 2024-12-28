@@ -26,6 +26,10 @@ export default function InfoSideBar() {
         };
     }, [state.isBurgerOpen, dispatch]);
 
+    const handleTabClick = (tab) => {
+        dispatch({ type: 'SET_ACTIVE_TAB', payload: tab });
+    };
+
     return (
         <>
             <div ref={sidebarRef} className={`info-side-bar-container ${state.isBurgerOpen ? "isBurgerOpen" : ""}`}>
@@ -36,11 +40,13 @@ export default function InfoSideBar() {
                     <img width={40} height={40} src={state.user?.photoURL} alt="Account Logo" />
                     <div className="item-text">{state.user?.displayName}</div>
                 </div>
-                <div className="sidebar-item">
+                <div className={`sidebar-item ${state.activeTab === 'contacts' ? 'active' : ''}`} 
+                     onClick={() => handleTabClick('contacts')}>
                     <FaAddressBook className="sidebar-icon" />
                     <div className="item-text">Contacts</div>
                 </div>
-                <div className="sidebar-item">
+                <div className={`sidebar-item ${state.activeTab === 'chats' ? 'active' : ''}`} 
+                     onClick={() => handleTabClick('chats')}>
                     <FaComments className="sidebar-icon" />
                     <div className="item-text">Chats</div>
                 </div>

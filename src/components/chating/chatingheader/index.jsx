@@ -1,3 +1,4 @@
+
 import './chatingheader.scss';
 import { MdBlock } from "react-icons/md";
 import { MdReport } from "react-icons/md";
@@ -10,11 +11,12 @@ import { SlArrowRight } from "react-icons/sl";
 import { useGlobalContext } from '../../../context';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { ref, remove } from 'firebase/database';
 import { firestoreDb, realtimeDb } from '../../../api/firebaseConfig';
 import toast from 'react-hot-toast';
 import UserProfile from '../../UserProfile';
+import { RiUserAddLine, RiUserUnfollowLine } from "react-icons/ri";
 
 function ChatingHeader() {
     const { state, dispatch } = useGlobalContext();
@@ -22,6 +24,7 @@ function ChatingHeader() {
     const [windowWidth, setWindowWidth] = useState(window.innerWidth);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isInContacts, setIsInContacts] = useState(false);
 
     useEffect(() => {
         const handleResize = () => {
@@ -124,6 +127,76 @@ function ChatingHeader() {
         setIsProfileOpen(true);
     };
 
+    useEffect(() => {
+        const checkIfInContacts = async () => {
+            try {
+                const usersRef = collection(firestoreDb, 'users');
+                const userQuery = query(usersRef, where("id", "==", state.user.id));
+                const userSnapshot = await getDocs(userQuery);
+                
+                if (!userSnapshot.empty) {
+                    const userData = userSnapshot.docs[0].data();
+                    const savedContacts = userData.saved || [];
+                    setIsInContacts(savedContacts.some(contact => contact.id === state.selectedUserId));
+                }
+            } catch (error) {
+                console.error('Error checking contacts:', error);
+            }
+        };
+
+        if (state.selectedUserId) {
+            checkIfInContacts();
+        }
+    }, [state.selectedUserId, state.user.id]);
+
+    const handleContactAction = async (e) => {
+        e.stopPropagation();
+        setIsSettingsOpen(false);
+
+        // Validate required data
+        if (!state.selectedUserId || !state.selectedUserName) {
+            toast.error('Cannot add contact: Missing user information');
+            return;
+        }
+
+        try {
+            const usersRef = collection(firestoreDb, 'users');
+            const userQuery = query(usersRef, where("id", "==", state.user.id));
+            const userSnapshot = await getDocs(userQuery);
+
+            if (!userSnapshot.empty) {
+                const userDoc = userSnapshot.docs[0];
+                const currentUserData = userDoc.data();
+                let savedContacts = currentUserData.saved || [];
+
+                if (isInContacts) {
+                    savedContacts = savedContacts.filter(contact => contact.id !== state.selectedUserId);
+                    toast.success('Contact removed successfully!');
+                } else {
+                    const newContact = {
+                        id: state.selectedUserId,
+                        displayName: state.selectedUserName,
+                        photoURL: state.selectedUserPhoto || '',
+                        bio: state.selectedUserBio || '',
+                        timestamp: Date.now()
+                    };
+                    savedContacts.push(newContact);
+                    toast.success('Contact added successfully!');
+                }
+
+                // Update with the new contacts array
+                await updateDoc(userDoc.ref, {
+                    saved: savedContacts
+                });
+                
+                setIsInContacts(!isInContacts);
+            }
+        } catch (error) {
+            console.error('Error updating contacts:', error);
+            toast.error('Error updating contacts');
+        }
+    };
+
     return (
         <>
             <div className="chating-header">
@@ -186,22 +259,10 @@ function ChatingHeader() {
                                 <VscAccount />
                             </span>
                         </div>
-                        <div>
-                            <span>Mute</span>
+                        <div onClick={handleContactAction}>
+                            <span>{isInContacts ? 'Remove Contact' : 'Add Contact'}</span>
                             <span>
-                                <AiOutlineSound />
-                            </span>
-                        </div>
-                        <div>
-                            <span>Block User</span>
-                            <span>
-                                <MdBlock />
-                            </span>
-                        </div>
-                        <div>
-                            <span>Report</span>
-                            <span>
-                                <MdReport />
+                                {isInContacts ? <RiUserUnfollowLine /> : <RiUserAddLine />}
                             </span>
                         </div>
                         <div onClick={handleDeleteChat} role="button" tabIndex={0}>
@@ -220,7 +281,9 @@ function ChatingHeader() {
                     name: state.selectedUserName,
                     photo: state.selectedUserPhoto,
                     nickname: state.selectedUserName, // или другой никнейм если есть
-                    bio: state.selectedUserBio // Add this line
+                    bio: state.selectedUserBio, // Add this line
+                    isInContacts: isInContacts,
+                    onContactAction: handleContactAction
                 }}
             />
         </>

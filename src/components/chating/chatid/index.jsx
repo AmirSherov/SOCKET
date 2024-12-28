@@ -8,7 +8,7 @@ import { init } from "filestack-js";
 import ChatingHeader from "../chatingheader";
 import { realtimeDb, firestoreDb } from '../../../api/firebaseConfig';
 import { ref, push, onChildAdded, remove, off, onChildRemoved, update, onChildChanged } from 'firebase/database'; // добавляем update
-import { doc, getDoc, updateDoc, arrayUnion, collection, getDocs, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, arrayUnion, collection, getDocs, setDoc, addDoc, query, where } from 'firebase/firestore';
 import Loader from '../../ui/Loader';
 import toast from 'react-hot-toast';
 import { MdOutlineFileDownload } from "react-icons/md";
@@ -183,50 +183,87 @@ export default function Chating() {
     setSelectedFile(null);
     setFileName("");
 
-    const newMessage = {
-      id: Date.now().toString(),
-      text: currentMessage,
-      file: currentFile,
-      timestamp: Date.now(),
-      senderId: userId,
-      status: 'delivered', // Add initial status
-      unread: true  // Добавляем флаг непрочитанного сообщения
-    };
-
     try {
-      // Define messagesRef once at the beginning
-      const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
-      await push(messagesRef, newMessage);
+        const messagesRef = ref(realtimeDb, `chats/${chatidSelected}/messages`);
+        const chatRef = doc(firestoreDb, 'chats', chatidSelected);
+        const chatDoc = await getDoc(chatRef);
 
-      const chatRef = doc(firestoreDb, 'chats', chatidSelected);
-      const chatDoc = await getDoc(chatRef);
+        const newMessage = {
+            id: Date.now().toString(),
+            text: currentMessage,
+            file: currentFile,
+            timestamp: Date.now(),
+            senderId: userId,
+            status: 'delivered',
+            unread: true
+        };
 
-      if (!chatDoc.exists()) {
-        const recipientId = chatidSelected.replace(userId, '').replace('-', '');
+        // Send message
+        await push(messagesRef, newMessage);
 
-        // ...existing chat creation code...
-      }
+        // Update lastMessage
+        await updateDoc(chatRef, {
+            lastMessage: {
+                text: currentMessage,
+                timestamp: Date.now(),
+                senderId: userId,
+                unread: true,
+                status: 'delivered'
+            }
+        });
 
-      // Update lastMessage
-      await updateDoc(chatRef, {
-        lastMessage: {
-          text: currentMessage,
-          timestamp: Date.now(),
-          senderId: userId,
-          unread: true,  // Добавляем флаг непрочитанного
-          status: 'delivered'
+        // Add users to each other's contacts if this is their first interaction
+        const [user1, user2] = chatidSelected.split('-');
+        const otherUserId = user1 === userId ? user2 : user1;
+
+        // Get both users' data
+        const usersRef = collection(firestoreDb, 'users');
+        const [currentUserDoc, otherUserDoc] = await Promise.all([
+            getDocs(query(usersRef, where("id", "==", userId))),
+            getDocs(query(usersRef, where("id", "==", otherUserId)))
+        ]);
+
+        const currentUserData = currentUserDoc.docs[0];
+        const otherUserData = otherUserDoc.docs[0];
+
+        // Check if users are not already in each other's contacts
+        const currentUserContacts = currentUserData.data().contacts || [];
+        const otherUserContacts = otherUserData.data().contacts || [];
+
+        if (!currentUserContacts.some(contact => contact.chatId === chatidSelected)) {
+            // Add other user to current user's contacts
+            await updateDoc(currentUserDoc.docs[0].ref, {
+                contacts: arrayUnion({
+                    chatId: chatidSelected,
+                    name: state.selectedUserName,
+                    photoURL: state.selectedUserPhoto,
+                    bio: state.selectedUserBio || ''
+                })
+            });
         }
-      });
 
-      setTimeout(scrollToBottom, 100);
-      toast.success('Message sent');
+        if (!otherUserContacts.some(contact => contact.chatId === chatidSelected)) {
+            // Add current user to other user's contacts
+            await updateDoc(otherUserDoc.docs[0].ref, {
+                contacts: arrayUnion({
+                    chatId: chatidSelected,
+                    name: state.user.displayName,
+                    photoURL: state.user.photoURL,
+                    bio: state.user.bio || ''
+                })
+            });
+        }
+
+        setTimeout(scrollToBottom, 100);
+        toast.success('Message sent');
     } catch (error) {
-      toast.error('Error sending message');
-      setMessage(currentMessage);
-      setSelectedFile(currentFile);
-      setFileName(fileName);
+        console.error('Error sending message:', error);
+        toast.error('Error sending message');
+        setMessage(currentMessage);
+        setSelectedFile(currentFile);
+        setFileName(fileName);
     }
-  };
+};
 
   // Add new function to mark messages as read
   const markMessagesAsRead = async () => {
@@ -382,6 +419,56 @@ export default function Chating() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [chatidSelected, messages, userId, loading]);
+
+  const handleSendMessage = async (messageText) => {
+    if (!messageText.trim()) return;
+    
+    try {
+        // Проверяем наличие чата
+        const chatRef = doc(firestoreDb, 'chats', chatidSelected);
+        const chatDoc = await getDoc(chatRef);
+        
+        if (!chatDoc.exists()) return;
+        
+        const chatData = chatDoc.data();
+        
+        // Отправка сообщения
+        const messageData = {
+            text: messageText,
+            senderId: state.user.id,
+            timestamp: new Date().toISOString(),
+            status: 'delivered',
+            unread: true
+        };
+
+        // Добавляем сообщение в чат
+        await addDoc(collection(firestoreDb, `chats/${chatidSelected}/messages`), messageData);
+
+        // Проверяем, является ли это первым сообщением
+        if (chatData.messages?.length === 0) {
+            // Получаем ID другого участника чата
+            const otherUserId = chatData.participants.find(id => id !== state.user.id);
+            
+            // Создаем объект контакта
+            const contactData = {
+                id: otherUserId,
+                displayName: state.selectedUserName,
+                photoURL: state.selectedUserPhoto,
+                bio: state.selectedUserBio
+            };
+
+            // Добавляем пользователя в контакты
+            const userRef = doc(firestoreDb, 'users', state.user.id);
+            await updateDoc(userRef, {
+                saved: arrayUnion(contactData)
+            });
+        }
+
+    } catch (error) {
+        console.error("Error sending message:", error);
+        toast.error("Failed to send message");
+    }
+};
 
   if (!chatidSelected) {
     return (

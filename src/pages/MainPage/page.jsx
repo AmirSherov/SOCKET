@@ -7,6 +7,7 @@ import InfoSideBar from "../../components/infosidebar";
 import Chating from "../../components/chating/chatid";
 import Sidechatbar from "../../components/sidechatbar";
 import Loader from "../../components/ui/Loader";
+import SideContactBar from "../../components/sidecontactbar/index"
 import "./mainpage.scss";
 
 export default function MainPage() {
@@ -55,7 +56,7 @@ export default function MainPage() {
     return (
         <div className={`main-page-container ${state.sidebarClose ? "sidebar-close-main" : ""}`}>
             <InfoSideBar />
-            <Sidechatbar />
+            {state.activeTab === 'chats' ? <Sidechatbar /> : <SideContactBar />}
             <Chating />
         </div>
     );
