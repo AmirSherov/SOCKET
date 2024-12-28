@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as filestack from 'filestack-js';
-import { auth, googleProvider } from '../../api/firebaseConfig';
+import { auth, googleAuth, githubProvider } from '../../api/firebaseConfig';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGlobalContext } from '../../context';
@@ -9,6 +9,7 @@ import Button from '../../hooks/Button';
 import { firestoreDb } from '../../api/firebaseConfig';
 import './auth.scss';
 import { set } from 'firebase/database';
+import { FaGoogle, FaGithub, FaEnvelope, FaLock, FaUser, FaAt } from 'react-icons/fa';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -94,12 +95,12 @@ export default function Register() {
 
   const signInWithGoogle = async () => {
     try {
-        const result = await signInWithPopup(auth, googleProvider);
+        const result = await signInWithPopup(auth, googleAuth);
         const user = result.user;
         let finalNickname;
 
         const usersRef = collection(firestoreDb, 'users');
-        const q = query(usersRef, where("id", "==", user.id));
+        const q = query(usersRef, where("id", "==", user.uid)); // Changed from user.id to user.uid
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
@@ -112,22 +113,24 @@ export default function Register() {
                 ? defaultNickname 
                 : `${defaultNickname}${Math.floor(Math.random() * 1000)}`;
 
-            await setDoc(doc(firestoreDb, 'users', user.id), {
-                id: user.id,
+            await setDoc(doc(firestoreDb, 'users', user.uid), { // Changed from user.id to user.uid
+                id: user.uid, // Changed from user.id to user.uid
                 email: user.email,
                 displayName: user.displayName || 'User',
                 nickname: finalNickname,
                 photoURL: user.photoURL || '',
                 contacts: [],
                 bio: '',
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                status: true,
+                lastSeen: new Date().toISOString()
             });
 
             dispatch({
                 type: 'SET_USER',
                 payload: {
                     email: user.email,
-                    id: user.id,
+                    id: user.uid, // Changed from user.id to user.uid
                     nickname: finalNickname,
                     displayName: user.displayName || 'User',
                     photoURL: user.photoURL || ''
@@ -139,7 +142,7 @@ export default function Register() {
                 type: 'SET_USER',
                 payload: {
                     email: user.email,
-                    id: user.id,
+                    id: user.uid, // Changed from user.id to user.uid
                     nickname: userData.nickname,
                     displayName: userData.displayName,
                     photoURL: userData.photoURL
@@ -147,7 +150,7 @@ export default function Register() {
             });
         }
 
-        localStorage.setItem('userId', user.id);
+        localStorage.setItem('userId', user.uid); // Changed from user.id to user.uid
         navigate('/');
     } catch (error) {
         console.error("Error during Google sign-in:", error);
@@ -155,50 +158,138 @@ export default function Register() {
     }
 };
 
+  // Add new function for GitHub sign in
+  const signInWithGithub = async () => {
+    try {
+        const result = await signInWithPopup(auth, githubProvider);
+        const user = result.user;
+        // Получаем дополнительную информацию о пользователе из GitHub
+        const githubUser = result._tokenResponse;
+        let finalNickname;
+
+        const usersRef = collection(firestoreDb, 'users');
+        const q = query(usersRef, where("id", "==", user.uid));
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+            // Используем username из GitHub или создаем из email
+            const defaultNickname = '@' + (githubUser.screenName || user.email.split('@')[0]);
+            
+            const nicknameQuery = query(usersRef, where("nickname", "==", defaultNickname));
+            const nicknameSnapshot = await getDocs(nicknameQuery);
+            
+            finalNickname = nicknameSnapshot.empty 
+                ? defaultNickname 
+                : `${defaultNickname}${Math.floor(Math.random() * 1000)}`;
+
+            await setDoc(doc(firestoreDb, 'users', user.uid), {
+                id: user.uid,
+                email: user.email,
+                displayName: githubUser.screenName || githubUser.displayName || user.email.split('@')[0],
+                nickname: finalNickname,
+                photoURL: githubUser.photoUrl || user.photoURL || '',
+                contacts: [],
+                bio: '',
+                createdAt: new Date().toISOString(),
+                status: true,
+                lastSeen: new Date().toISOString()
+            });
+
+            dispatch({
+                type: 'SET_USER',
+                payload: {
+                    email: user.email,
+                    id: user.uid,
+                    nickname: finalNickname,
+                    displayName: githubUser.screenName || githubUser.displayName || user.email.split('@')[0],
+                    photoURL: githubUser.photoUrl || user.photoURL || ''
+                }
+            });
+        } else {
+            const userData = querySnapshot.docs[0].data();
+            dispatch({
+                type: 'SET_USER',
+                payload: {
+                    email: user.email,
+                    id: user.uid,
+                    nickname: userData.nickname,
+                    displayName: userData.displayName,
+                    photoURL: userData.photoURL
+                }
+            });
+        }
+
+        localStorage.setItem('userId', user.uid);
+        navigate('/');
+    } catch (error) {
+        console.error("Error during GitHub sign-in:", error);
+        setError(error.message);
+    }
+};
+
   return (
     <div className="auth-container">
       <div className="auth-form">
-        <h2>Регистрация</h2>
+        <h2 className="title-with-animation">Регистрация</h2>
         {error && <p className="error">{error}</p>}
         <form onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Пароль"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="@никнейм"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-          <Button type="submit" width="100%" height="40px">
+          <div className="input-group">
+            <FaEnvelope className="input-icon" />
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="input-group">
+            <FaLock className="input-icon" />
+            <input
+              type="password"
+              placeholder="Пароль"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <div className="input-group">
+            <FaAt className="input-icon" />
+            <input
+              type="text"
+              placeholder="@никнейм"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+            />
+          </div>
+          <div className="input-group">
+            <FaUser className="input-icon" />
+            <input
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+          <Button type="submit" width="100%" height="40px" className="primary-button">
             Зарегистрироватся
           </Button>
         </form>
-        <Button
-          type="button"
-          onclick={signInWithGoogle}
-          width="100%"
-          height="40px"
-          bg="#4285F4"
-        >
-          Sign up with Google
-        </Button>
-        <p>
+        <div className="social-buttons">
+          <Button
+            type="button"
+            onClick={signInWithGoogle}
+            className="social-button google"
+          >
+            <FaGoogle /> Google
+          </Button>
+          <Button
+            type="button"
+            onClick={signInWithGithub}
+            className="social-button github"
+          >
+            <FaGithub /> GitHub
+          </Button>
+        </div>
+        <p className="auth-link">
           Already have an account? <Link to="/login">Login</Link>
         </p>
       </div>

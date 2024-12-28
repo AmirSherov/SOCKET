@@ -12,10 +12,25 @@ const client = init("A9SyIIcLaSvaAOwQJBrC4z");
 
 export default function AccountSettings({ isOpen, onClose }) {
     const { state } = useGlobalContext();
-    const [username, setUsername] = useState(state.user?.displayName || '');
-    const [nickname, setNickname] = useState(state.user?.nickname || '');
-    const [bio, setBio] = useState(state.user?.bio || '');
-    const [avatar, setAvatar] = useState(state.user.photoURL);
+    const [username, setUsername] = useState('');
+    const [nickname, setNickname] = useState('');
+    const [bio, setBio] = useState('');
+    const [avatar, setAvatar] = useState('');
+
+    // Add useEffect to safely set initial values
+    useEffect(() => {
+        if (state.user) {
+            setUsername(state.user.displayName || '');
+            setNickname(state.user.nickname || '');
+            setBio(state.user.bio || '');
+            setAvatar(state.user.photoURL || '');
+        }
+    }, [state.user]);
+
+    // Protect against null user
+    if (!state.user) {
+        return null;
+    }
 
     if (!isOpen) return null;
 
@@ -100,7 +115,7 @@ export default function AccountSettings({ isOpen, onClose }) {
 
                 <div className="avatar-section">
                     <div className="avatar-container">
-                        <img src={avatar} alt="Profile" />
+                        <img src={avatar || 'default-avatar.png'}  alt="Profile" />
                         <button className="change-avatar-btn" onClick={openFilestack}>
                             <FaCamera />
                         </button>

@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 import { getFirestore } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC-xtGARuxmJn0uC25SXlz7PSHk33LPXsQ",
@@ -18,7 +18,13 @@ export const realtimeDb = getDatabase(app);
 export const firestoreDb = getFirestore(app);
 export const auth = getAuth(app);
 
-const provider = new GoogleAuthProvider();
-provider.addScope('profile');
-provider.addScope('email');
-export const googleProvider = provider;
+const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('profile');
+googleProvider.addScope('email');
+export const googleAuth = googleProvider
+
+export const githubProvider = new GithubAuthProvider();
+githubProvider.addScope('user'); // Add required scopes
+githubProvider.setCustomParameters({
+    'allow_signup': 'true'
+});

@@ -32,17 +32,15 @@ export default function MainPage() {
                 const q = query(usersRef, where("id", "==", userId));
                 const querySnapshot = await getDocs(q);
 
-                if (!querySnapshot.empty) {
-                    const userDoc = querySnapshot.docs[0]; // Предполагается, что id уникален
-                    dispatch({
-                        type: 'SET_USER',
-                        payload: userDoc.data(),
-                    });
-                } else {
-                    // Если пользователь не найден
-                    console.error('User not found');
-                    // navigate('/login');
+                if (querySnapshot.empty) {
+                    throw new Error('User not found');
                 }
+
+                const userData = querySnapshot.docs[0].data();
+                dispatch({
+                    type: 'SET_USER',
+                    payload: userData
+                });
             } catch (error) {
                 console.error('Error loading user:', error);
             } finally {

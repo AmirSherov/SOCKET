@@ -257,10 +257,8 @@ export default function Chating() {
         }
 
         setTimeout(scrollToBottom, 100);
-        toast.success('Message sent');
     } catch (error) {
         console.error('Error sending message:', error);
-        toast.error('Error sending message');
         setMessage(currentMessage);
         setSelectedFile(currentFile);
         setFileName(fileName);

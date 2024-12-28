@@ -3,7 +3,7 @@
     height: 100vh;
     background-color: #0e1621;
     color: white;
-    padding: 10px;
+    padding: 13px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
@@ -24,8 +24,12 @@
     }
     .sidebar-item-logo{
         margin-bottom: 20px;
+        text-align: center;
      div{
+        text-align: center;
         i{
+            color: white;
+            text-align: center;
             font-size: 30px;
         }
      }
@@ -33,15 +37,17 @@
 }
 .sidebar-item-logo{
     font-size: 30px;
+    margin-top: 20px;
     font-family: 'Courier New', Courier, monospace;
     font-weight: 700;
 }
 .sidebar-item {
     display: flex;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     padding: 12px;
     border-radius: 8px;
+    width: 150px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 
@@ -90,4 +96,12 @@
     display: block;
     z-index: 9999999;
     transform: translateX(0);
+}
+.user-name{
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+.user-info-sideinfobar{
+    max-width: 150px;
 }

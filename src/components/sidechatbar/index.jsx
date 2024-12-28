@@ -177,7 +177,7 @@ export default function SideChatBar() {
                 const userData = doc.data();
                 dispatch({ 
                     type: 'SET_SELECTED_USER_STATUS', 
-                    payload: userData.status || false 
+                    payload: userData.status || false
                 });
             }
         });

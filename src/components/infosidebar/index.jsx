@@ -36,9 +36,9 @@ export default function InfoSideBar() {
                 <div className="sidebar-item-logo">
                     <div className="item-text"><i>SOCKET</i></div>
                 </div>
-                <div className="sidebar-item">
+                <div className="sidebar-item user-info-sideinfobar">
                     <img width={40} height={40} src={state.user?.photoURL} alt="Account Logo" />
-                    <div className="item-text">{state.user?.displayName}</div>
+                    <div className="item-text user-name">{state.user?.displayName}</div>
                 </div>
                 <div className={`sidebar-item ${state.activeTab === 'contacts' ? 'active' : ''}`} 
                      onClick={() => handleTabClick('contacts')}>
