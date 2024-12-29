@@ -6,13 +6,11 @@
   --gradient-2: linear-gradient(45deg, #00ff88 0%, #00a6ff 100%);
   --neon-glow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
 }
-
 @keyframes float {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-20px); }
   100% { transform: translateY(0px); }
 }
-
 @keyframes gradientBG {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -24,7 +22,6 @@
   100% { background-position: 200% 0; }
 }
 
-// Custom cursor styles
 .cursor-follower {
   width: 300px;
   height: 300px;

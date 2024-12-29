@@ -302,7 +302,7 @@ export default function SideChatBar() {
                     <div className="burger-line"></div>
                 </div>
             }
-            <div className="search-container">
+            <div className={`search-container ${isSearching ? 'active-search' : ''}`}>
                 <input
                     type="text"
                     placeholder="Search users by @name..."
@@ -313,35 +313,37 @@ export default function SideChatBar() {
                         searchUsers(value);
                     }}
                     onFocus={() => setIsSearching(true)}
-                    onBlur={() => {
-                        setTimeout(() => setIsSearching(false), 200);
-                    }}
+                    onBlur={() => setTimeout(() => setIsSearching(false), 200)}
                 />
-                {isSearching && searchQuery && filteredUsers.length > 0 && (
+                {(isSearching || searchQuery) && (
                     <div className="search-results">
-                        {filteredUsers.map((user) => (
-                            <div
-                                key={user.id}
-                                className="search-result-item"
-                                onClick={() => {
-                                    handleUserSelect(user);
-                                    setIsSearching(false);
-                                }}
-                            >
-                                <img
-                                    src={user.photoURL || 'default-avatar.png'}
-                                    alt={user.displayName}
-                                    className="user-avatar"
-                                />
-                                <div className="user-info">
-                                    <span>{user.displayName}</span>
+                        {filteredUsers.length > 0 ? (
+                            filteredUsers.map((user) => (
+                                <div
+                                    key={user.id}
+                                    className="search-result-item"
+                                    onClick={() => {
+                                        handleUserSelect(user);
+                                        setIsSearching(false);
+                                    }}
+                                >
+                                    <img
+                                        src={user.photoURL || 'default-avatar.png'}
+                                        alt={user.displayName}
+                                        className="user-avatar"
+                                    />
+                                    <div className="user-info">
+                                        <span>{user.displayName}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        ) : (
+                            <div className="no-results">No users found</div>
+                        )}
                     </div>
                 )}
             </div>
-            <div className="side-chat-bar-header">
+            <div className={`side-chat-bar-header ${isSearching ? 'search-active' : ''}`}>
                 {contacts.length > 0 ? (
                     contacts
                         .sort((a, b) => {

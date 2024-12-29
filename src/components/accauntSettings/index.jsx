@@ -91,7 +91,7 @@ export default function AccountSettings({ isOpen, onClose }) {
         try {
             await signOut(auth);
             localStorage.removeItem('userId');
-            window.location.href = '/login';
+            window.location.href = '/';
             toast.success('Successfully signed out');
         } catch (error) {
             toast.error('Error signing out');

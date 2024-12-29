@@ -1,7 +1,7 @@
 .info-side-bar-container {
     width: 180px;
     height: 100vh;
-    background-color: #0e1621;
+    background: linear-gradient(180deg, #0e1621 0%, #1a2634 100%);
     color: white;
     padding: 13px;
     display: flex;
@@ -13,6 +13,7 @@
     position: relative;
     z-index: 999999999;
     transform: translateX(0);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
     @media(max-width:1050px){
         width: 250px;
     }
@@ -34,11 +35,21 @@
      }
     }
 }
-.sidebar-item-logo{
-    font-size: 30px;
-    margin-top: 20px;
-    font-family: 'Courier New', Courier, monospace;
+.sidebar-item-logo {
+    font-size: 32px;
+    margin: 25px 0;
+    font-family: 'Poppins', sans-serif;
     font-weight: 700;
+    letter-spacing: 1px;
+    div {
+        text-align: center;
+        i {
+            background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    }
 }
 .sidebar-item {
     display: flex;
@@ -48,34 +59,49 @@
     border-radius: 8px;
     width: 160px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
 
     &:hover {
-        background-color: #34495e;
+        background: rgba(52, 73, 94, 0.7);
+        transform: translateX(5px);
     }
 
     .sidebar-icon {
         font-size: 1.5rem;
         margin-right: 15px;
         color: white;
+        transition: transform 0.3s ease;
+    }
+
+    &:hover .sidebar-icon {
+        transform: scale(1.1);
     }
 
     .item-text {
         font-size: 1rem;
         font-weight: 500;
+        transition: color 0.3s ease;
     }
 
     img {
         border-radius: 50%;
         margin-right: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 }
 
 .sidebar-item.active {
-    background-color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(45deg, rgba(79, 172, 254, 0.1) 0%, rgba(0, 242, 254, 0.1) 100%);
+    border: 1px solid rgba(79, 172, 254, 0.2);
+    transform: translateX(5px);
     
     .sidebar-icon, .item-text {
-        color: #fff;
+        background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 }
 
@@ -100,4 +126,7 @@
     font-size: 1.2rem;
     font-weight: 600;
     margin-bottom: 10px;
+    background: linear-gradient(45deg, #fff 0%, #e0e0e0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }

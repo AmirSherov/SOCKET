@@ -1,12 +1,26 @@
+// Common scrollbar styles
+@mixin scrollbar {
+    &::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: #0e1621;
+        border-radius: 5px;
+    }
+}
+
 .side-chat-bar-container {
     background-color: #17212b;
     height: 100vh;
-    width:400px;
-    overflow: hidden; // Убираем вертикальный скролл
+    width: 400px;
+    overflow: hidden; // Убираем вертикальный 
     display: flex;
+    position: relative;
     flex-direction: column;
     border-right: 1px solid #0e1621;
-    @media(max-width:600px){
+
+    @media(max-width:600px) {
         position: fixed;
         top: 0;
         left: 0;
@@ -14,7 +28,10 @@
         overflow-y: hidden;
         overflow-x: hidden;
     }
-    .burger-menu{
+
+    @include scrollbar;
+
+    .burger-menu {
         position: absolute;
         top: 10px;
         transition: all 0.3s ease-in-out;
@@ -24,84 +41,149 @@
         display: none;
         cursor: pointer;
         z-index: 9999;
-        div{
+
+        div {
             width: 30px;
             height: 4px;
             background-color: #fff;
             margin: 5px 0;
             border-radius: 5px;
         }
-        div:nth-child(2){
-           margin-left: 5px;
+
+        div:nth-child(2) {
+            margin-left: 5px;
         }
-        div:nth-child(3){
+
+        div:nth-child(3) {
             margin-left: 10px;
-         }
-        @media(max-width:1050px){
+        }
+
+        @media(max-width:1050px) {
             display: block;
         }
     }
-    &::-webkit-scrollbar {
-        width: 5px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-        background-color: #0e1621;
-        border-radius: 5px;
-    }
 
     .search-container {
-        padding: 10px;
+        padding: 15px;
         position: sticky;
         top: 0;
         margin-top: 50px;
         z-index: 2;
         background-color: #17212b;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
         input {
             width: 100%;
-            padding: 10px;
+            padding: 12px 15px;
             background-color: #242f3d;
-            border: none;
-            border-radius: 5px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
             color: white;
             font-size: 14px;
+            transition: all 0.3s ease;
 
             &:focus {
+                width: 100%;
                 outline: none;
                 background-color: #2c3a4a;
+                border-color: rgba(255, 255, 255, 0.2);
+                box-shadow: 0 0 0 2px rgba(76, 158, 235, 0.3);
+            }
+
+            &::placeholder {
+                color: rgba(255, 255, 255, 0.5);
             }
         }
 
         .search-results {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background-color: #17212b;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            z-index: 1000;
-            max-height: 300px;
-            overflow-y: auto;
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 12px;
+            background-color: #1e2731;
 
             .search-result-item {
-                padding: 10px;
+                padding: 20px;
+                font-size: 1.4rem;
                 display: flex;
                 align-items: center;
-                gap: 10px;
+                background: transparent;
+                color: var(--primary-color);
+                border-radius: 30px;
                 cursor: pointer;
-                color: white;
-
-                &:hover {
-                    background-color: #242f3d;
+                transition: all 0.3s ease;
+                margin-top: 20px;
+                font-weight: bold;
+                width: 100%;
+                height: 90px;
+                box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3);
+                position: relative;
+                overflow: hidden;
+        
+                &::before {
+                  content: '';
+                  position: absolute;
+                  top: 0;
+                  left: -100%;
+                  width: 100%;
+                  height: 100%;
+                  background: linear-gradient(
+                    120deg,
+                    transparent,
+                    rgba(1, 0, 34, 0.4),
+                    transparent
+                  );
+                  transition: 0.5s;
                 }
-
+            
+                &:hover::before {
+                  left: 100%;
+                }
+              
                 .user-avatar {
-                    width: 40px;
-                    height: 40px;
+                    width: 45px;
+                    height: 45px;
                     border-radius: 50%;
                     object-fit: cover;
+                    border: 2px solid rgba(255, 255, 255, 0.1);
+                    transition: transform 0.2s ease;
+
+                    &:hover {
+                        transform: scale(1.05);
+                    }
                 }
+
+                .user-info {
+                    margin-left: 12px;
+                    flex: 1;
+
+                    span {
+                        color: #fff;
+                        font-size: 15px;
+                        font-weight: 500;
+                        display: block;
+                    }
+                }
+            }
+        }
+
+        &.searching, &.active-search {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #17212b;
+            z-index: 10;
+
+            .search-results {
+                height: calc(100vh - 80px);
+                overflow-y: auto;
+                margin-top: 15px;
+                background: none;
+                border: none;
+                padding: 0 15px;
+
+                @include scrollbar;
             }
         }
     }
@@ -117,14 +199,7 @@
         overflow-y: auto; // Добавляем скролл только для контактов
         height: calc(100vh - 120px); // Устанавливаем высоту для скролла
 
-        &::-webkit-scrollbar {
-            width: 5px;
-        }
-    
-        &::-webkit-scrollbar-thumb {
-            background-color: #0e1621;
-            border-radius: 5px;
-        }
+        @include scrollbar;
 
         .contact-item {
             color: #fff;
@@ -170,7 +245,7 @@
 
             &.unread {
                 position: relative;
-                
+
                 &::after {
                     content: '';
                     position: absolute;
@@ -182,7 +257,7 @@
                     background-color: #4C9EEB;
                     border-radius: 50%;
                 }
-        
+
                 .contact-last-message {
                     font-weight: bold;
                     color: #fff;
@@ -207,6 +282,22 @@
                 margin-right: 10px;
             }
         }
+
+        opacity: 1;
+        visibility: visible;
+        transition: opacity 0.3s ease,
+        visibility 0.3s ease;
+
+        &.hidden {
+            opacity: 0;
+            visibility: hidden;
+            height: 0;
+            overflow: hidden;
+        }
+
+        &.search-active {
+            display: none;
+        }
     }
 }
 
@@ -223,61 +314,102 @@
     margin: 10px;
 }
 
+// Base contact-item styles (moved outside and consolidated)
 .contact-item {
     display: flex;
     align-items: center;
-    padding: 10px 15px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    margin: 8px 15px;
+    background: rgba(30, 39, 49, 0.7);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #fff;
 
     &:hover {
-        background-color: #2C3847;
+        background: rgba(43, 82, 120, 0.8);
+        transform: translateX(5px);
+        border-color: rgba(76, 158, 235, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
 
     .contact-avatar {
-        margin-right: 12px;
+        position: relative;
+        margin-right: 15px;
 
         img {
             width: 50px;
             height: 50px;
             border-radius: 50%;
             object-fit: cover;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+
+            &:hover {
+                transform: scale(1.05);
+                border-color: rgba(76, 158, 235, 0.5);
+            }
         }
     }
 
     .contact-info {
         flex: 1;
-        overflow: hidden;
 
         .contact-name {
-            color: #fff;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 500;
-            margin-right: 180px;
+            color: rgba(255, 255, 255, 0.95);
+            margin-bottom: 4px;
+        }
+
+        .contact-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            .contact-last-message {
+                font-size: 13px;
+                color: rgba(255, 255, 255, 0.6);
+                max-width: 70%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .contact-time {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.4);
+            }
         }
     }
 
-    .contact-details {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    &.online::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 12px;
+        height: 12px;
+        background-color: #4CAF50;
+        border-radius: 50%;
+        border: 2px solid #17212b;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+    }
 
-        .contact-last-message {
-            flex: 1;
-            color: #8A8D91;
-            font-size: 13px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-right: 140px;
-            margin-top: 20px;
-        }
+    &.unread {
+        position: relative;
 
-        .contact-time {
-            color: #6D7175;
-            font-size: 12px;
-            white-space: nowrap;
+        &::after {
+            content: '';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            width: 8px;
+            height: 8px;
+            background-color: #4C9EEB;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(76, 158, 235, 0.5);
         }
     }
 }
@@ -299,8 +431,15 @@
         transition: transform 0.3s ease-in-out;
     }
 }
-.open{
+
+.open {
     transition: all 0.3s ease-in-out;
     z-index: 999999;
     transform: translateX(630%);
+}
+
+.no-results {
+    color: #fff;
+    text-align: center;
+    margin-top: 20px;
 }

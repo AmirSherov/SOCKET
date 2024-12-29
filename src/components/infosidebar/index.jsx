@@ -3,6 +3,8 @@ import { FaComments, FaCog, FaAddressBook } from "react-icons/fa";
 import { useGlobalContext } from "../../context";
 import AccauntSettings from "../accauntSettings/index"
 import { useState, useRef, useEffect } from "react";
+import { motion } from 'framer-motion';  // Add this import
+
 export default function InfoSideBar() {
     const [isOpen, setIsOpen] = useState(false);
     const { state, dispatch } = useGlobalContext();
@@ -25,10 +27,19 @@ export default function InfoSideBar() {
 
     const handleTabClick = (tab) => {
         dispatch({ type: 'SET_ACTIVE_TAB', payload: tab });
+        if(state.activeTab !== tab) {
+            dispatch({ type: 'SET_SELECTED_CHAT', payload: null });
+        }
     };
     return (
         <>
-            <div ref={sidebarRef} className={`info-side-bar-container ${state.isBurgerOpen ? "isBurgerOpen" : ""}`}>
+            <motion.div 
+                ref={sidebarRef} 
+                className={`info-side-bar-container ${state.isBurgerOpen ? "isBurgerOpen" : ""}`}
+                initial={{ opacity: 0, x: -50 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+            >
                 <div className="sidebar-item-logo">
                     <div className="item-text"><i>SOCKET</i></div>
                 </div>
@@ -50,7 +61,7 @@ export default function InfoSideBar() {
                     <FaCog className="sidebar-icon" />
                     <div className="item-text">Settings</div>
                 </div>
-            </div>
+            </motion.div>
             <AccauntSettings isOpen={isOpen} onClose={() => setIsOpen(false)} />
         </>
     );
