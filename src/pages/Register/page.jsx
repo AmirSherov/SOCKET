@@ -77,7 +77,7 @@ export default function Register() {
       });
 
       localStorage.setItem('userId', user.uid);
-      navigate('/');
+      navigate('/conversations', { replace: true });
     } catch (error) {
       setError(error.message);
     }
@@ -133,7 +133,7 @@ export default function Register() {
             });
         }
         localStorage.setItem('userId', user.uid)
-        navigate('/');
+        navigate('/conversations', { replace: true });
     } catch (error) {
         console.error("Error during Google sign-in:", error);
         setError(error.message);
@@ -192,7 +192,7 @@ export default function Register() {
             });
         }
         localStorage.setItem('userId', user.uid);
-        navigate('/');
+        navigate('/conversations');
     } catch (error) {
         console.error("Error during GitHub sign-in:", error);
         setError(error.message);

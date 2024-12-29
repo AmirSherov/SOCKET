@@ -20,7 +20,7 @@ export default function Login() {
   useEffect(() => {
     const userId = localStorage.getItem('userId');
     if (userId) {
-      navigate('/', { replace: true });
+      navigate('/conversations', { replace: true });
     }
     const loadUsers = async () => {
       try {
@@ -60,7 +60,7 @@ export default function Login() {
         }
       });
       localStorage.setItem('userId', user.uid);
-      navigate('/', { replace: true });
+      navigate('/conversations', { replace: true });
     } catch (error) {
       console.error('Login error:', error);
       setError('Неверный email или пароль');
@@ -84,7 +84,7 @@ export default function Login() {
         payload: userData
       });
       localStorage.setItem('userId', user.uid);
-      navigate('/', { replace: true });
+      navigate('/conversations', { replace: true });
     } catch (error) {
       console.error('Google sign in error:', error);
       setError('Ошибка входа через Google');
@@ -109,7 +109,7 @@ export default function Login() {
       });
   
       localStorage.setItem('userId', user.uid);
-      navigate('/', { replace: true });
+      navigate('/conversations', { replace: true });
     } catch (error) {
       console.error('GitHub sign in error:', error);
       setError('Ошибка входа через GitHub');

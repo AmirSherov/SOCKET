@@ -57,7 +57,7 @@ export default function Chating() {
     window.history.pushState(null, null, window.location.href);
 
     const handlePopState = () => {
-        navigate('/');
+        navigate('/conversations');
     };
     window.addEventListener('popstate', handlePopState);
 
