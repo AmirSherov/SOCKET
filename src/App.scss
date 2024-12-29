@@ -15,32 +15,3 @@
 body {
     background-color: #17212b;
 }
-.notification-toast {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: #17212b;
-    border-radius: 8px;
-    
-    img {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-    }
-  
-    h4 {
-      color: #fff;
-      margin: 0;
-    }
-  
-    p {
-      color: #8f9ba8;
-      margin: 5px 0 0;
-    }
-  
-    &:hover {
-      background: #1c2733;
-    }
-  }

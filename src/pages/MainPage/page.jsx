@@ -15,10 +15,7 @@ export default function MainPage() {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { state, dispatch } = useGlobalContext();
-    
-    // Add online status tracking
     useOnlineStatus(state.user?.id);
-
     useEffect(() => {
         const checkAuth = async () => {
             const userId = localStorage.getItem('userId');
@@ -27,7 +24,6 @@ export default function MainPage() {
                 return;
             }
             try {
-                // Создаем запрос для поиска пользователя по id
                 const usersRef = collection(firestoreDb, 'users');
                 const q = query(usersRef, where("id", "==", userId));
                 const querySnapshot = await getDocs(q);
@@ -35,7 +31,6 @@ export default function MainPage() {
                 if (querySnapshot.empty) {
                     throw new Error('User not found');
                 }
-
                 const userData = querySnapshot.docs[0].data();
                 dispatch({
                     type: 'SET_USER',
@@ -47,14 +42,12 @@ export default function MainPage() {
                 setLoading(false);
             }
         };
-
         checkAuth();
     }, [dispatch, navigate]);
 
     if (loading) {
         return <Loader />;
     }
-
     return (
         <div className={`main-page-container ${state.sidebarClose ? "sidebar-close-main" : ""}`}>
             <InfoSideBar />

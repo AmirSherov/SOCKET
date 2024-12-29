@@ -1,9 +1,5 @@
-
 import './chatingheader.scss';
-import { MdBlock } from "react-icons/md";
-import { MdReport } from "react-icons/md";
 import { MdDelete } from "react-icons/md";
-import { AiOutlineSound } from "react-icons/ai";
 import { VscAccount } from "react-icons/vsc";
 import { IoSettings } from "react-icons/io5";
 import { SlArrowLeft } from "react-icons/sl";
@@ -17,7 +13,6 @@ import { firestoreDb, realtimeDb } from '../../../api/firebaseConfig';
 import toast from 'react-hot-toast';
 import UserProfile from '../../UserProfile';
 import { RiUserAddLine, RiUserUnfollowLine } from "react-icons/ri";
-
 function ChatingHeader() {
     const { state, dispatch } = useGlobalContext();
     const navigate = useNavigate();
@@ -25,16 +20,13 @@ function ChatingHeader() {
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isInContacts, setIsInContacts] = useState(false);
-
     useEffect(() => {
         const handleResize = () => {
             setWindowWidth(window.innerWidth);
         };
-
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-
     const handleArrowClick = () => {
         if (windowWidth < 1050) {
             navigate('/');
@@ -46,18 +38,15 @@ function ChatingHeader() {
             dispatch({ type: "SIDEBAR_CLOSE", payload: !state.sidebarClose });
         }
     };
-
     const handleSettingsClick = (e) => {
         e.stopPropagation();
         setIsSettingsOpen(!isSettingsOpen);
     };
-
     useEffect(() => {
         const closeSettings = () => setIsSettingsOpen(false);
         document.addEventListener('click', closeSettings);
         return () => document.removeEventListener('click', closeSettings);
     }, []);
-
     const handleDeleteChat = async (e) => {
         e.stopPropagation();
         setIsSettingsOpen(false);
@@ -65,24 +54,18 @@ function ChatingHeader() {
             toast.error('No chat selected');
             return;
         }
-
         if (!window.confirm('Are you sure you want to delete this chat?')) {
             return;
         }
-
         try {
             const chatRef = doc(firestoreDb, 'chats', state.selectedChat);
             const chatDoc = await getDoc(chatRef);
-            
             if (!chatDoc.exists()) return;
-            
             const chatData = chatDoc.data();
             const participants = chatData.participants;
-
             const usersCollectionRef = collection(firestoreDb, 'users');
             const usersSnapshot = await getDocs(usersCollectionRef);
             const users = [];
-            
             usersSnapshot.forEach(doc => {
                 const userData = doc.data();
                 if (participants.includes(userData.id)) {
@@ -92,23 +75,17 @@ function ChatingHeader() {
                     });
                 }
             });
-
             const userUpdates = users.map(user => {
                 const userRef = doc(firestoreDb, 'users', user.docId);
                 const updatedContacts = (user.contacts || []).filter(
                     contact => contact.chatId !== state.selectedChat
                 );
-                
                 return updateDoc(userRef, { contacts: updatedContacts });
             });
-
             const messagesRef = ref(realtimeDb, `chats/${state.selectedChat}/messages`);
             await remove(messagesRef);
-
             await deleteDoc(chatRef);
-
             await Promise.all(userUpdates);
-
             dispatch({ type: "SET_SELECTED_CHAT", payload: null });
             dispatch({ type: "SET_SELECTED_USER_NAME", payload: null });
             dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: null });
@@ -120,13 +97,11 @@ function ChatingHeader() {
             console.error("Error deleting chat:", error);
         }
     };
-
     const handleProfileClick = (e) => {
         e.stopPropagation();
         setIsSettingsOpen(false);
         setIsProfileOpen(true);
     };
-
     useEffect(() => {
         const checkIfInContacts = async () => {
             try {
@@ -143,32 +118,25 @@ function ChatingHeader() {
                 console.error('Error checking contacts:', error);
             }
         };
-
         if (state.selectedUserId) {
             checkIfInContacts();
         }
     }, [state.selectedUserId, state.user.id]);
-
     const handleContactAction = async (e) => {
         e.stopPropagation();
         setIsSettingsOpen(false);
-
-        // Validate required data
         if (!state.selectedUserId || !state.selectedUserName) {
             toast.error('Cannot add contact: Missing user information');
             return;
         }
-
         try {
             const usersRef = collection(firestoreDb, 'users');
             const userQuery = query(usersRef, where("id", "==", state.user.id));
             const userSnapshot = await getDocs(userQuery);
-
             if (!userSnapshot.empty) {
                 const userDoc = userSnapshot.docs[0];
                 const currentUserData = userDoc.data();
                 let savedContacts = currentUserData.saved || [];
-
                 if (isInContacts) {
                     savedContacts = savedContacts.filter(contact => contact.id !== state.selectedUserId);
                     toast.success('Contact removed successfully!');
@@ -183,12 +151,9 @@ function ChatingHeader() {
                     savedContacts.push(newContact);
                     toast.success('Contact added successfully!');
                 }
-
-                // Update with the new contacts array
                 await updateDoc(userDoc.ref, {
                     saved: savedContacts
                 });
-                
                 setIsInContacts(!isInContacts);
             }
         } catch (error) {
@@ -196,7 +161,6 @@ function ChatingHeader() {
             toast.error('Error updating contacts');
         }
     };
-
     return (
         <>
             <div className="chating-header">
@@ -281,8 +245,8 @@ function ChatingHeader() {
                 userData={{
                     name: state.selectedUserName,
                     photo: state.selectedUserPhoto,
-                    nickname: state.selectedUserName, // или другой никнейм если есть
-                    bio: state.selectedUserBio, // Add this line
+                    nickname: state.selectedUserName, 
+                    bio: state.selectedUserBio, 
                     isInContacts: isInContacts,
                     onContactAction: handleContactAction
                 }}

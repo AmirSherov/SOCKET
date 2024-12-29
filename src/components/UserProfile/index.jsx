@@ -3,7 +3,6 @@ import { IoClose } from "react-icons/io5";
 
 function UserProfile({ isOpen, onClose, userData }) {
     if (!isOpen) return null;
-
     return (
         <div className="selected-user-profile-overlay" onClick={onClose}>
             <div className="selected-user-profile-modal" onClick={e => e.stopPropagation()}>

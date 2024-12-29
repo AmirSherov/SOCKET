@@ -1,14 +1,12 @@
 import "./infosidebar.scss";
-import { FaUserCircle, FaComments, FaCog, FaAddressBook } from "react-icons/fa";
+import { FaComments, FaCog, FaAddressBook } from "react-icons/fa";
 import { useGlobalContext } from "../../context";
 import AccauntSettings from "../accauntSettings/index"
 import { useState, useRef, useEffect } from "react";
-
 export default function InfoSideBar() {
     const [isOpen, setIsOpen] = useState(false);
     const { state, dispatch } = useGlobalContext();
     const sidebarRef = useRef(null);
-
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (sidebarRef.current && 
@@ -17,7 +15,6 @@ export default function InfoSideBar() {
                 dispatch({ type: 'SET_IS_BURGER_OPEN', payload: false });
             }
         };
-
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('touchstart', handleClickOutside);
         return () => {
@@ -29,7 +26,6 @@ export default function InfoSideBar() {
     const handleTabClick = (tab) => {
         dispatch({ type: 'SET_ACTIVE_TAB', payload: tab });
     };
-
     return (
         <>
             <div ref={sidebarRef} className={`info-side-bar-container ${state.isBurgerOpen ? "isBurgerOpen" : ""}`}>

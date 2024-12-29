@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import * as filestack from 'filestack-js';
 import { auth, googleAuth, githubProvider } from '../../api/firebaseConfig';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useNavigate, Link } from 'react-router-dom';
@@ -8,9 +7,7 @@ import { doc, setDoc, collection, getDocs, query, where } from 'firebase/firesto
 import Button from '../../hooks/Button';
 import { firestoreDb } from '../../api/firebaseConfig';
 import './auth.scss';
-import { set } from 'firebase/database';
 import { FaGoogle, FaGithub, FaEnvelope, FaLock, FaUser, FaAt } from 'react-icons/fa';
-
 export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +17,6 @@ export default function Register() {
   const [existingNicknames, setExistingNicknames] = useState([]);
   const navigate = useNavigate();
   const { dispatch } = useGlobalContext();
-
   useEffect(() => {
     const loadExistingNicknames = async () => {
       const usersSnap = await getDocs(collection(firestoreDb, 'users'));
@@ -29,7 +25,6 @@ export default function Register() {
     };
     loadExistingNicknames();
   }, []);
-
   const validateNickname = (nick) => {
     if (!nick.startsWith('@')) {
       return 'Никнейм должен начинаться с @';
@@ -39,7 +34,6 @@ export default function Register() {
     }
     return null;
   };
-
   const createFirestoreUser = async (userData) => {
     try {
       await setDoc(doc(firestoreDb, 'users', userData.uid), {
@@ -51,7 +45,7 @@ export default function Register() {
         createdAt: new Date().toISOString(),
         contacts: [],
         bio: '',
-        status: true, // Add initial status
+        status: true, 
         lastSeen: new Date().toISOString(),
         password: password,
       });
@@ -60,7 +54,6 @@ export default function Register() {
       throw error;
     }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const nicknameError = validateNickname(nickname);
@@ -68,13 +61,10 @@ export default function Register() {
       setError(nicknameError);
       return;
     }
-
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
       await createFirestoreUser(user);
-      
       dispatch({
         type: 'SET_USER',
         payload: {
@@ -92,29 +82,23 @@ export default function Register() {
       setError(error.message);
     }
   };
-
   const signInWithGoogle = async () => {
     try {
         const result = await signInWithPopup(auth, googleAuth);
         const user = result.user;
         let finalNickname;
-
         const usersRef = collection(firestoreDb, 'users');
-        const q = query(usersRef, where("id", "==", user.uid)); // Changed from user.id to user.uid
+        const q = query(usersRef, where("id", "==", user.uid)); 
         const querySnapshot = await getDocs(q);
-
         if (querySnapshot.empty) {
             const defaultNickname = '@' + user.email.split('@')[0];
-            
             const nicknameQuery = query(usersRef, where("nickname", "==", defaultNickname));
             const nicknameSnapshot = await getDocs(nicknameQuery);
-            
             finalNickname = nicknameSnapshot.empty 
                 ? defaultNickname 
                 : `${defaultNickname}${Math.floor(Math.random() * 1000)}`;
-
-            await setDoc(doc(firestoreDb, 'users', user.uid), { // Changed from user.id to user.uid
-                id: user.uid, // Changed from user.id to user.uid
+            await setDoc(doc(firestoreDb, 'users', user.uid), {
+                id: user.uid, 
                 email: user.email,
                 displayName: user.displayName || 'User',
                 nickname: finalNickname,
@@ -125,12 +109,11 @@ export default function Register() {
                 status: true,
                 lastSeen: new Date().toISOString()
             });
-
             dispatch({
                 type: 'SET_USER',
                 payload: {
                     email: user.email,
-                    id: user.uid, // Changed from user.id to user.uid
+                    id: user.uid, 
                     nickname: finalNickname,
                     displayName: user.displayName || 'User',
                     photoURL: user.photoURL || ''
@@ -142,46 +125,37 @@ export default function Register() {
                 type: 'SET_USER',
                 payload: {
                     email: user.email,
-                    id: user.uid, // Changed from user.id to user.uid
+                    id: user.uid,
                     nickname: userData.nickname,
                     displayName: userData.displayName,
                     photoURL: userData.photoURL
                 }
             });
         }
-
-        localStorage.setItem('userId', user.uid); // Changed from user.id to user.uid
+        localStorage.setItem('userId', user.uid)
         navigate('/');
     } catch (error) {
         console.error("Error during Google sign-in:", error);
         setError(error.message);
     }
 };
-
-  // Add new function for GitHub sign in
   const signInWithGithub = async () => {
     try {
         const result = await signInWithPopup(auth, githubProvider);
         const user = result.user;
-        // Получаем дополнительную информацию о пользователе из GitHub
         const githubUser = result._tokenResponse;
         let finalNickname;
-
         const usersRef = collection(firestoreDb, 'users');
         const q = query(usersRef, where("id", "==", user.uid));
         const querySnapshot = await getDocs(q);
-
         if (querySnapshot.empty) {
-            // Используем username из GitHub или создаем из email
             const defaultNickname = '@' + (githubUser.screenName || user.email.split('@')[0]);
-            
             const nicknameQuery = query(usersRef, where("nickname", "==", defaultNickname));
             const nicknameSnapshot = await getDocs(nicknameQuery);
             
             finalNickname = nicknameSnapshot.empty 
                 ? defaultNickname 
                 : `${defaultNickname}${Math.floor(Math.random() * 1000)}`;
-
             await setDoc(doc(firestoreDb, 'users', user.uid), {
                 id: user.uid,
                 email: user.email,
@@ -194,7 +168,6 @@ export default function Register() {
                 status: true,
                 lastSeen: new Date().toISOString()
             });
-
             dispatch({
                 type: 'SET_USER',
                 payload: {
@@ -218,7 +191,6 @@ export default function Register() {
                 }
             });
         }
-
         localStorage.setItem('userId', user.uid);
         navigate('/');
     } catch (error) {
@@ -226,7 +198,6 @@ export default function Register() {
         setError(error.message);
     }
 };
-
   return (
     <div className="auth-container">
       <div className="auth-form">

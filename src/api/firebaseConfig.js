@@ -24,7 +24,7 @@ googleProvider.addScope('email');
 export const googleAuth = googleProvider
 
 export const githubProvider = new GithubAuthProvider();
-githubProvider.addScope('user'); // Add required scopes
+githubProvider.addScope('user');
 githubProvider.setCustomParameters({
     'allow_signup': 'true'
 });

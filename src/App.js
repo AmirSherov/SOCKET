@@ -8,7 +8,9 @@ function App() {
   return (
     <BrowserRouter>
       <GlobalProvider>
-      <Toaster position="top-center" />
+      <Toaster position="top-center"
+        zIndex={9999999999}
+      />
         <Routes />
       </GlobalProvider>
     </BrowserRouter>

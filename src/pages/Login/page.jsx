@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useGlobalContext } from '../../context';
-import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { auth, googleAuth, githubProvider, firestoreDb } from '../../api/firebaseConfig';
 import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 import Button from '../../hooks/Button';
@@ -17,7 +17,6 @@ export default function Login() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { dispatch } = useGlobalContext();
-
   useEffect(() => {
     const userId = localStorage.getItem('userId');
     if (userId) {
@@ -39,21 +38,17 @@ export default function Login() {
 
     loadUsers();
   }, []);
-
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      
-      // Get user data from Firestore
       const userDoc = await getDoc(doc(firestoreDb, 'users', user.uid));
       if (!userDoc.exists()) {
         throw new Error('User does not exist in database');
+        toast.error('Пользователь не существует в базе данных');
       }
-      
       const userData = userDoc.data();
-      
       dispatch({
         type: 'SET_USER',
         payload: {
@@ -64,7 +59,6 @@ export default function Login() {
           photoURL: userData.photoURL || ''
         }
       });
-
       localStorage.setItem('userId', user.uid);
       navigate('/', { replace: true });
     } catch (error) {
@@ -73,55 +67,47 @@ export default function Login() {
       toast.error('Неверный email или пароль');
     }
   };
-
   const signInWithGoogle = async () => {
     try {
       const result = await signInWithPopup(auth, googleAuth);
       const user = result.user;
-      
-      // Check if user exists in Firestore
       const userRef = doc(firestoreDb, 'users', user.uid);
       const userSnap = await getDoc(userRef);
-      
       if (!userSnap.exists()) {
         setError('Аккаунт не существует. Пожалуйста, зарегистрируйтесь.');
+        toast.error('Аккаунт не существует. Пожалуйста, зарегистрируйтесь.');
         return;
       }
-
       const userData = userSnap.data();
       dispatch({
         type: 'SET_USER',
         payload: userData
       });
-      
       localStorage.setItem('userId', user.uid);
       navigate('/', { replace: true });
     } catch (error) {
       console.error('Google sign in error:', error);
       setError('Ошибка входа через Google');
+      toast.error('Ошибка входа через Google');
     }
   };
-
   const signInWithGithub = async () => {
     try {
       const result = await signInWithPopup(auth, githubProvider);
       const user = result.user;
-      
-      // Check if user exists in Firestore
       const userRef = doc(firestoreDb, 'users', user.uid);
       const userSnap = await getDoc(userRef);
-      
       if (!userSnap.exists()) {
         setError('Аккаунт не существует. Пожалуйста, зарегистрируйтесь.');
+        toast.error('Аккаунт не существует. Пожалуйста, зарегистрируйтесь.');
         return;
       }
-
       const userData = userSnap.data();
       dispatch({
         type: 'SET_USER',
         payload: userData
       });
-      
+  
       localStorage.setItem('userId', user.uid);
       navigate('/', { replace: true });
     } catch (error) {
@@ -129,7 +115,6 @@ export default function Login() {
       setError('Ошибка входа через GitHub');
     }
   };
-
   return (
      <div className='auth-container'>
  <div className="auth-form">

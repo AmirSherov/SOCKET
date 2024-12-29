@@ -7,17 +7,13 @@ import { useGlobalContext } from '../../context/index';
 import { FaCamera } from 'react-icons/fa';
 import { init } from "filestack-js";
 import toast from 'react-hot-toast';
-
 const client = init("A9SyIIcLaSvaAOwQJBrC4z");
-
 export default function AccountSettings({ isOpen, onClose }) {
     const { state } = useGlobalContext();
     const [username, setUsername] = useState('');
     const [nickname, setNickname] = useState('');
     const [bio, setBio] = useState('');
     const [avatar, setAvatar] = useState('');
-
-    // Add useEffect to safely set initial values
     useEffect(() => {
         if (state.user) {
             setUsername(state.user.displayName || '');
@@ -26,14 +22,10 @@ export default function AccountSettings({ isOpen, onClose }) {
             setAvatar(state.user.photoURL || '');
         }
     }, [state.user]);
-
-    // Protect against null user
     if (!state.user) {
         return null;
     }
-
     if (!isOpen) return null;
-
     const openFilestack = () => {
         const options = {
             accept: ['image/*'],
@@ -53,7 +45,6 @@ export default function AccountSettings({ isOpen, onClose }) {
         };
         client.picker(options).open();
     };
-
     const handleUpdateProfile = async () => {
         try {
             if (!nickname.startsWith('@')) {
@@ -61,9 +52,11 @@ export default function AccountSettings({ isOpen, onClose }) {
                 return;
             }
 
+            if (username.length > 8) {
+                toast.error("Username must be under 8 characters");
+                return;
+            }
             const usersRef = collection(firestoreDb, 'users');
-            
-            // Проверка уникальности никнейма
             if (nickname !== state.user.nickname) {
                 const nicknameQuery = query(usersRef, where("nickname", "==", nickname));
                 const querySnapshot = await getDocs(nicknameQuery);
@@ -73,7 +66,6 @@ export default function AccountSettings({ isOpen, onClose }) {
                     return;
                 }
             }
-
             const userQuery = query(usersRef, where("id", "==", state.user.id));
             const userSnapshot = await getDocs(userQuery);
 
@@ -85,7 +77,6 @@ export default function AccountSettings({ isOpen, onClose }) {
                     bio: bio,
                     photoURL: avatar,
                 };
-
                 await updateDoc(userDoc.ref, updatedData);
                 toast.success('Profile updated successfully!');
                 onClose();
@@ -96,7 +87,6 @@ export default function AccountSettings({ isOpen, onClose }) {
             toast.error('Error updating profile');
         }
     };
-
     const handleSignOut = async () => {
         try {
             await signOut(auth);
@@ -107,21 +97,18 @@ export default function AccountSettings({ isOpen, onClose }) {
             toast.error('Error signing out');
         }
     };
-
     return (
         <div className="modal-overlay">
             <div className="modal-content">
                 <h2>Account Settings</h2>
-
                 <div className="avatar-section">
                     <div className="avatar-container">
-                        <img src={avatar || 'default-avatar.png'}  alt="Profile" />
+                        <img src={avatar || 'default-avatar.png'} alt="Profile" />
                         <button className="change-avatar-btn" onClick={openFilestack}>
                             <FaCamera />
                         </button>
                     </div>
                 </div>
-
                 <div className="settings-section">
                     <label>
                         Username
@@ -133,7 +120,6 @@ export default function AccountSettings({ isOpen, onClose }) {
                         />
                     </label>
                 </div>
-
                 <div className="settings-section">
                     <label>
                         Nickname
@@ -155,7 +141,6 @@ export default function AccountSettings({ isOpen, onClose }) {
                         />
                     </label>
                 </div>
-
                 <div className="modal-buttons">
                     <button className="save-btn" onClick={handleUpdateProfile}>
                         Save Changes

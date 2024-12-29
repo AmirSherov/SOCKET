@@ -3,10 +3,9 @@ import { useGlobalContext } from "../../context";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { firestoreDb } from '../../api/firebaseConfig';
-import { collection, query, where, doc, onSnapshot, getDocs, setDoc, updateDoc, getDoc, arrayUnion, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, query, where, doc, onSnapshot, getDocs, setDoc, updateDoc, getDoc, serverTimestamp, addDoc } from 'firebase/firestore';
 import Loader from '../ui/Loader';
 import toast from 'react-hot-toast';
-
 export default function SideChatBar() {
     const { state, dispatch } = useGlobalContext();
     const [contacts, setContacts] = useState([]);
@@ -20,8 +19,6 @@ export default function SideChatBar() {
     const navigate = useNavigate();
     const user = state.user;
     const currentUserId = state.user?.id || localStorage.getItem('userId');
-
-    // Group all useEffect hooks together at the top
     useEffect(() => {
         const handleResize = () => {
             setWindowWidth(window.innerWidth);
@@ -31,18 +28,13 @@ export default function SideChatBar() {
             window.removeEventListener('resize', handleResize);
         };
     }, []);
-
-    // Main user data effect
     useEffect(() => {
         if (!user?.id) {
             setLoading(false);
             return;
         }
-
-        // Подписка на контакты текущего пользователя
         const usersRef = collection(firestoreDb, 'users');
         const q = query(usersRef, where("id", "==", user.id));
-
         const unsubscribeContacts = onSnapshot(q, (querySnapshot) => {
             if (!querySnapshot.empty) {
                 const userDoc = querySnapshot.docs[0];
@@ -51,34 +43,21 @@ export default function SideChatBar() {
             }
             setLoading(false);
         });
-
         return () => unsubscribeContacts();
     }, [user?.id]);
-
-    // Contacts effect
     useEffect(() => {
         if (contacts.length === 0 || !state.user?.id) return;
-
         const usersRef = collection(firestoreDb, 'users');
-        
-        // Get valid user IDs from contacts
         const contactUserIds = contacts
             .map(contact => contact.userId)
-            .filter(id => id); // Remove any undefined or null values
-
-        // Only proceed if we have valid IDs
+            .filter(id => id); 
         if (contactUserIds.length === 0) return;
-
-        // Create query for users with valid IDs
         const q = query(usersRef, where("id", "in", contactUserIds));
-        
         const unsubscribeUsers = onSnapshot(q, async (snapshot) => {
             let hasUpdates = false;
             const updatedContacts = contacts.map(contact => {
-                if (!contact.userId) return contact; // Skip if no userId
-
+                if (!contact.userId) return contact; 
                 const actualUserDoc = snapshot.docs.find(doc => doc.data().id === contact.userId);
-                
                 if (actualUserDoc) {
                     const userData = actualUserDoc.data();
                     if (
@@ -97,13 +76,10 @@ export default function SideChatBar() {
                 }
                 return contact;
             });
-
-            // Only update if we have changes
             if (hasUpdates) {
                 try {
                     const userQuery = query(usersRef, where("id", "==", state.user.id));
                     const userSnapshot = await getDocs(userQuery);
-
                     if (!userSnapshot.empty) {
                         const userDoc = userSnapshot.docs[0];
                         await updateDoc(userDoc.ref, {
@@ -116,23 +92,16 @@ export default function SideChatBar() {
                 }
             }
         });
-
         return () => unsubscribeUsers();
     }, [contacts, state.user?.id, currentUserId]);
-
-    // Status tracking effect
     useEffect(() => {
         if (contacts.length === 0) return;
-
         const contactUserIds = contacts.map(contact => {
             const [user1, user2] = contact.chatId.split('-');
             return currentUserId === user1 ? user2 : user1;
         });
-
         const usersRef = collection(firestoreDb, 'users');
         const q = query(usersRef, where("id", "in", contactUserIds));
-
-        // Subscribe to real-time status updates
         const unsubscribeStatuses = onSnapshot(q, (snapshot) => {
             const statuses = {};
             snapshot.docs.forEach(doc => {
@@ -141,15 +110,11 @@ export default function SideChatBar() {
             });
             setUserStatuses(statuses);
         });
-
         return () => unsubscribeStatuses();
     }, [contacts, currentUserId]);
-
-    // Messages effect
     useEffect(() => {
         const unsubscribers = contacts.map(contact => {
             if (!contact.chatId) return null;
-
             const chatRef = doc(firestoreDb, 'chats', contact.chatId);
             return onSnapshot(chatRef, (chatDoc) => {
                 if (chatDoc.exists()) {
@@ -161,16 +126,12 @@ export default function SideChatBar() {
                 }
             });
         });
-
         return () => {
             unsubscribers.forEach(unsub => unsub && unsub());
         };
     }, [contacts]);
-
-    // Selected user status effect - moved from bottom to top
     useEffect(() => {
         if (!state.selectedUserId) return;
-
         const userRef = doc(firestoreDb, 'users', state.selectedUserId);
         const unsubscribe = onSnapshot(userRef, (doc) => {
             if (doc.exists()) {
@@ -181,25 +142,21 @@ export default function SideChatBar() {
                 });
             }
         });
-
         return () => unsubscribe();
     }, [state.selectedUserId, dispatch]);
-
     const searchUsers = async (searchTerm) => {
         if (!searchTerm.trim() || !searchTerm.startsWith('@') || searchTerm.length <= 1) {
             setFilteredUsers([]);
             return;
         }
-
         try {
             const usersRef = collection(firestoreDb, 'users');
             const querySnapshot = await getDocs(usersRef);
-
             const users = [];
             querySnapshot.forEach((doc) => {
                 const userData = doc.data();
                 if (userData && userData.id !== currentUserId) {
-                    const searchValue = searchTerm.substring(1).toLowerCase(); // Remove '@' for search
+                    const searchValue = searchTerm.substring(1).toLowerCase();
                     const displayNameMatch = userData.displayName?.toLowerCase().includes(searchValue);
 
                     if (displayNameMatch) {
@@ -218,22 +175,17 @@ export default function SideChatBar() {
             toast.error('Error searching users');
         }
     };
-
     const extendedContacts = [...contacts, ...Array(50).fill().map((_, i) => ({
-        ...contacts[i % contacts.length], // Дублирует существующий контакт
-        chatId: `test-${i}`, // Генерирует уникальный `chatId` для каждого нового контакта
-        name: `Test User ${i + 1}`, // Генерирует уникальное имя
-        photoURL: 'default-avatar.png' // Устанавливает аватар по умолчанию
+        ...contacts[i % contacts.length],
+        chatId: `test-${i}`,
+        name: `Test User ${i + 1}`, 
+        photoURL: 'default-avatar.png' 
     }))];
-
     const handleUserSelect = async (selectedUser) => {
         const chatId = [currentUserId, selectedUser.id].sort().join('-');
-
         try {
-            // Initialize chat if it doesn't exist
             const chatRef = doc(firestoreDb, 'chats', chatId);
             const chatDoc = await getDoc(chatRef);
-
             if (!chatDoc.exists()) {
                 await setDoc(chatRef, {
                     participants: [currentUserId, selectedUser.id],
@@ -241,36 +193,28 @@ export default function SideChatBar() {
                     messages: []
                 });
             }
-
-            // Update the UI state only
             dispatch({ type: "SET_SELECTED_CHAT", payload: chatId });
             dispatch({ type: "SET_SELECTED_USER_NAME", payload: selectedUser.displayName });
             dispatch({ type: "SET_SELECTED_USER_PHOTO", payload: selectedUser.photoURL });
             dispatch({ type: 'SET_SELECTED_USER_STATUS', payload: selectedUser.status });
-            
             if (windowWidth < 600) {
                 navigate(`/chating/${chatId}`);
             }
-
             setSearchQuery('');
             setFilteredUsers([]);
-
         } catch (error) {
             console.error("Error creating chat:", error);
             toast.error('Error creating chat');
         }
     };
-
     const handleContactClick = async (contact) => {
         try {
-            // Проверяем существующий чат
             const chatsRef = collection(firestoreDb, 'chats');
             const chatQuery = query(
                 chatsRef,
                 where('participants', 'array-contains', state.user.id)
             );
             const chatSnapshot = await getDocs(chatQuery);
-            
             let existingChat = null;
             chatSnapshot.forEach(doc => {
                 const chat = { ...doc.data(), id: doc.id };
@@ -278,12 +222,10 @@ export default function SideChatBar() {
                     existingChat = chat;
                 }
             });
-
             let currentChat;
             if (existingChat) {
                 currentChat = existingChat;
             } else {
-                // Создаем новый чат
                 const newChat = {
                     participants: [state.user.id, contact.id],
                     lastMessage: null,
@@ -293,8 +235,6 @@ export default function SideChatBar() {
                 const docRef = await addDoc(chatsRef, newChat);
                 currentChat = { ...newChat, id: docRef.id };
             }
-
-            // Устанавливаем только информацию для чата
             if(windowWidth < 600) {
                 navigate(`/chating/${currentChat.id}`);
                 dispatch({ type: 'SET_CURRENT_CHAT', payload: currentChat });
@@ -312,12 +252,10 @@ export default function SideChatBar() {
                 dispatch({ type: 'SET_SELECTED_USER_STATUS', payload: contact.status });
             }
             dispatch({ type: 'SET_ACTIVE_TAB', payload: 'chats' });
-
         } catch (error) {
             console.error("Error handling contact click:", error);
         }
     };
-
     if (loading) {
         return (
             <div className="side-chat-bar-container">
@@ -325,26 +263,18 @@ export default function SideChatBar() {
             </div>
         );
     }
-
-    // В функции selectChat добавляем обновление статуса сообщения
     const selectChat = async (chatId) => {
         try {
             const [user1, user2] = chatId.split('-');
             const otherUserId = user1 === currentUserId ? user2 : user1;
-
-            // Get other user's data
             const usersRef = collection(firestoreDb, 'users');
             const userQuery = query(usersRef, where("id", "==", otherUserId));
             const userSnapshot = await getDocs(userQuery);
-            
             if (!userSnapshot.empty) {
                 const userData = userSnapshot.docs[0].data();
-                
                 if (windowWidth < 600) {
                     navigate(`/chating/${chatId}`);
                 }
-
-                // Update all necessary user information including real-time status
                 dispatch({ type: 'SET_SELECTED_CHAT', payload: chatId });
                 dispatch({ type: 'SET_SELECTED_USER_ID', payload: otherUserId });
                 dispatch({ type: 'SET_SELECTED_USER_NAME', payload: userData.displayName });
@@ -356,14 +286,12 @@ export default function SideChatBar() {
             console.error("Error selecting chat:", error);
             toast.error("Error selecting chat");
         }
-
         const chatRef = doc(firestoreDb, 'chats', chatId);
         updateDoc(chatRef, {
             'lastMessage.unread': false,
             'lastMessage.status': 'read'
         });
     };
-
     return (
         <div className={`side-chat-bar-container ${state.sidebarClose ? "sidebar-close-chat" : ""}`}>
             {!state.isBurgerOpen &&
@@ -386,7 +314,6 @@ export default function SideChatBar() {
                     }}
                     onFocus={() => setIsSearching(true)}
                     onBlur={() => {
-                        // Delay hiding results to allow for clicking
                         setTimeout(() => setIsSearching(false), 200);
                     }}
                 />
@@ -425,7 +352,6 @@ export default function SideChatBar() {
                             return timeB - timeA;
                         })
                         .map(contact => {
-                            // Get other user's ID and status
                             const [user1, user2] = contact.chatId.split('-');
                             const otherUserId = currentUserId === user1 ? user2 : user1;
                             const isOnline = userStatuses[otherUserId] || false;
@@ -445,7 +371,6 @@ export default function SideChatBar() {
                                         dispatch({ type: 'SET_SELECTED_USER_PHOTO', payload: contact.photoURL });
                                         dispatch({ type: 'SET_SELECTED_USER_BIO', payload: contact.bio }); // Make sure bio is dispatched
                                         console.log(contact.bio);
-                                        // Mark message as read when clicked
                                         if (chatMessages[contact.chatId]?.unread) {
                                             const chatRef = doc(firestoreDb, 'chats', contact.chatId);
                                             updateDoc(chatRef, {
